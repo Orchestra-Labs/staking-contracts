@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "contracts/native-staking",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+sylvia = "1.3.0"
+cw-storage-plus = "2.0.0"
+cw-utils = "2.0.0"
+cw2 = "2.0.0"
+semver = "1.0.23"
+thiserror = "2.0.0"
+assert_matches = "1.5.0"
