@@ -1,19 +1,41 @@
 [package]
 name = "native-staking"
-authors = ["Jazz877"]
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors = ["symphony-dev-team"]
 
-[features]
-library = []
+exclude = [
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[package.metadata.scripts]
+optimize = """docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.5
+"""
+
 [dependencies]
-sylvia = "1.3.0"
-cw-storage-plus = "2.0.0"
-cw-utils = "2.0.0"
+cosmwasm-std = { workspace = true }
+cosmwasm-storage = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-utils = { workspace = true }
+cw-ownable = { workspace = true }
+cw2 = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+cosmwasm-schema = { workspace = true }
+symphony-utils = { workspace = true }
 
 [dev-dependencies]
-sylvia = { version = "1.3.0", features = ["mt"] }
+cw-multi-test = { workspace = true }
