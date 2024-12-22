@@ -1,140 +1,170 @@
-use cw_storage_plus::Item;
-use sylvia::contract;
-use sylvia::ctx::{ExecCtx, InstantiateCtx, QueryCtx};
-use sylvia::cw_schema::cw_serde;
 #[cfg(not(feature = "library"))]
-use sylvia::cw_std::Empty;
-use sylvia::cw_std::{Addr, Response, StdResult};
-use sylvia::types::{CustomMsg, CustomQuery};
-use cw_utils::Duration;
+use cosmwasm_std::entry_point;
 
-#[cw_serde(crate = "sylvia::cw_schema")]
-pub struct NativeToken {
-    pub denom: Option<String>,
-    pub decimals: u8,
+use crate::error::ContractError;
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse};
+use crate::state::{Config, CONFIG, STAKED_BALANCES, STAKED_TOTAL};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128};
+use cw2::set_contract_version;
+use cw_ownable::get_ownership;
+use symphony_utils::duration::validate_duration;
+
+pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-native-staking";
+pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: InstantiateMsg,
+) -> Result<Response<Empty>, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    let owner = msg.owner.as_deref().unwrap_or(info.sender.as_str());
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner))?;
+
+    validate_duration(msg.unbonding_period)?;
+
+    let config= Config {
+        staking_token: msg.denom_unit,
+        unstaking_duration: msg.unbonding_period,
+    };
+
+    CONFIG.save(deps.storage, &config)?;
+
+    STAKED_TOTAL.save(deps.storage, &Uint128::zero(), env.block.height)?;
+    Ok(Response::new())
 }
 
-#[cw_serde(crate = "sylvia::cw_schema")]
-pub struct InstantiateMsgData {
-    pub owner: Option<Addr>,
-    pub native_token: NativeToken,
-    pub unstaking_duration: Option<Duration>,
-}
-
-pub struct CounterContract<E, Q> {
-    pub count: Item<u64>,
-    pub owner: Item<Addr>,
-    pub native_token: Item<NativeToken>,
-    pub unstaking_duration: Item<Duration>,
-    _phantom: std::marker::PhantomData<(E, Q)>,
-}
-
-#[cfg_attr(not(feature = "library"), sylvia::entry_points(generics<Empty, Empty>))]
-#[contract]
-#[sv::custom(msg = E, query = Q)]
-impl<E, Q> CounterContract<E, Q>
-where
-    E: CustomMsg + 'static,
-    Q: CustomQuery + 'static,
-{
-    pub const fn new() -> Self {
-        Self {
-            count: Item::new("count"),
-            owner: Item::new("owner"),
-            native_token: Item::new("native_token"),
-            unstaking_duration: Item::new("unstaking_duration"),
-            _phantom: std::marker::PhantomData,
-        }
-    }
-
-    #[sv::msg(instantiate)]
-    fn instantiate(&self, ctx: InstantiateCtx<Q>, data: InstantiateMsgData) -> StdResult<Response<E>> {
-        let owner = data.owner.unwrap_or(ctx.info.sender);
-        ctx.deps.api.addr_validate(owner.as_str())?;
-        self.owner.save(ctx.deps.storage, &owner)?;
-
-        self.native_token.save(ctx.deps.storage, &data.native_token)?;
-
-        let unbounding_duration = data.unstaking_duration.unwrap_or(Duration::Time(0));
-        self.unstaking_duration.save(ctx.deps.storage, &unbounding_duration)?;
-
-        Ok(Response::new())
-    }
-
-    #[sv::msg(exec)]
-    fn increment(&self, ctx: ExecCtx<Q>) -> StdResult<Response<E>> {
-        self.count
-            .update(ctx.deps.storage, |count| -> StdResult<u64> {
-                Ok(count + 1)
-            })?;
-        Ok(Response::new())
-    }
-
-    #[sv::msg(query)]
-    fn count(&self, ctx: QueryCtx<Q>) -> StdResult<CountResponse> {
-        let count = self.count.load(ctx.deps.storage)?;
-        Ok(CountResponse { count })
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(deps: DepsMut,
+               env: Env,
+               info: MessageInfo,
+               msg: ExecuteMsg) -> Result<Response<Empty>, ContractError> {
+    match msg {
+        ExecuteMsg::UpdateOwnership(action) => execute_update_owner(deps, info, env, action),
+        ExecuteMsg::UpdateConfig { unbonding_period } => execute_update_config(deps, env, info, unbonding_period),
+        ExecuteMsg::Stake {} => execute_stake(deps, env, info),
     }
 }
 
-#[cw_serde(crate = "sylvia")]
-pub struct CountResponse {
-    pub count: u64,
+pub fn execute_update_owner(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    action: cw_ownable::Action,
+) -> Result<Response, ContractError> {
+    let ownership = cw_ownable::update_ownership(deps, &env.block, &info.sender, action)?;
+    Ok(Response::default().add_attributes(ownership.into_attributes()))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub fn execute_update_config(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    unbonding_period: Option<cw_utils::Duration>,
+) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    use sylvia::cw_multi_test::IntoAddr;
-    use sylvia::cw_std::testing::{message_info, mock_dependencies, mock_env};
-    use sylvia::cw_std::Empty;
+    validate_duration(unbonding_period)?;
 
-    // Unit tests don't have to use a testing framework for simple things.
-    //
-    // For more complex tests (particularly involving cross-contract calls), you
-    // may want to check out `cw-multi-test`:
-    // https://github.com/CosmWasm/cw-multi-test
-    #[test]
-    fn init() {
-        let sender = "alice".into_addr();
-        let contract = CounterContract::<Empty, Empty>::new();
-        let mut deps = mock_dependencies();
-        let ctx = InstantiateCtx::from((deps.as_mut(), mock_env(), message_info(&sender, &[])));
-        contract.instantiate(ctx).unwrap();
+    CONFIG.update(deps.storage, |mut config| -> Result<Config, StdError> {
+        config.unstaking_duration = unbonding_period;
+        Ok(config)
+    })?;
 
-        // We're inspecting the raw storage here, which is fine in unit tests. In
-        // integration tests, you should not inspect the internal state like this,
-        // but observe the external results.
-        assert_eq!(0, contract.count.load(deps.as_ref().storage).unwrap());
+    Ok(Response::new()
+        .add_attribute("action", "update_config")
+        .add_attribute(
+            "unstaking_duration",
+            unbonding_period
+                .map(|d| format!("{d}"))
+                .unwrap_or_else(|| "none".to_string()),
+        ))
+}
+
+pub fn execute_stake(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let sender = info.sender;
+    deps.api.addr_validate(&sender.as_str())?;
+
+    if info.funds.is_empty() {
+        return Err(ContractError::NoStakeAmount {});
     }
 
-    #[test]
-    fn query() {
-        let sender = "alice".into_addr();
-        let contract = CounterContract::<Empty, Empty>::new();
-        let mut deps = mock_dependencies();
-        let ctx = InstantiateCtx::from((deps.as_mut(), mock_env(), message_info(&sender, &[])));
-        contract.instantiate(ctx).unwrap();
-
-        let ctx = QueryCtx::from((deps.as_ref(), mock_env()));
-        let res = contract.count(ctx).unwrap();
-        assert_eq!(0, res.count);
+    if info.funds.iter().any(|c| c.denom != config.staking_token.denom) {
+        return Err(ContractError::InvalidDenom {});
     }
 
-    #[test]
-    fn inc() {
-        let sender = "alice".into_addr();
-        let contract = CounterContract::<Empty, Empty>::new();
-        let mut deps = mock_dependencies();
-        let ctx = InstantiateCtx::from((deps.as_mut(), mock_env(), message_info(&sender, &[])));
-        contract.instantiate(ctx).unwrap();
+    let amount_to_stake = info.funds.iter().find(|c| c.denom == config.staking_token.denom)
+        .map(|c| c.amount).unwrap_or_default();
 
-        let ctx = ExecCtx::from((deps.as_mut(), mock_env(), message_info(&sender, &[])));
-        contract.increment(ctx).unwrap();
-
-        let ctx = QueryCtx::from((deps.as_ref(), mock_env()));
-        let res = contract.count(ctx).unwrap();
-        assert_eq!(1, res.count);
+    if amount_to_stake.is_zero() {
+        return Err(ContractError::NoStakeAmount {});
     }
+
+    STAKED_BALANCES.update(
+        deps.storage,
+        &sender,
+        env.block.height,
+        |bal| -> StdResult<Uint128> { Ok(bal.unwrap_or_default().checked_add(amount_to_stake)?) },
+    )?;
+    STAKED_TOTAL.update(
+        deps.storage,
+        env.block.height,
+        |total| -> StdResult<Uint128> {
+            // Initialized during instantiate - OK to unwrap.
+            Ok(total.unwrap().checked_add(amount_to_stake)?)
+        },
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("action", "stake")
+        .add_attribute("from", sender)
+        .add_attribute("denom", config.staking_token.denom)
+        .add_attribute("amount", amount_to_stake))
+}
+
+//TODO: Implement migration logic
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response<Empty>, ContractError> {
+    Ok(Response::new())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => query_config(deps),
+        QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
+        QueryMsg::StakedBalanceAtHeight { address, height } => to_json_binary(&query_staked_balance(deps, env, address, height)?),
+        QueryMsg::TotalStakedAtHeight { height } => to_json_binary(&query_total_staked_at_height(deps, env, height)?),
+    }
+}
+
+fn query_config(deps: Deps) -> StdResult<Binary> {
+    let config = CONFIG.load(deps.storage)?;
+    to_json_binary(&config)
+}
+
+fn query_staked_balance(deps: Deps, env: Env, address: String, height: Option<u64>) -> StdResult<StakedBalanceAtHeightResponse> {
+    let query_address = deps.api.addr_validate(&address)?;
+    let query_height = height.unwrap_or(env.block.height);
+    let balance = STAKED_BALANCES.may_load_at_height(deps.storage, &query_address, query_height)?.unwrap_or_default();
+    Ok(StakedBalanceAtHeightResponse { balance, height: query_height })
+}
+
+pub fn query_total_staked_at_height(
+    deps: Deps,
+    _env: Env,
+    height: Option<u64>,
+) -> StdResult<TotalStakedAtHeightResponse> {
+    let height = height.unwrap_or(_env.block.height);
+    let total = STAKED_TOTAL
+        .may_load_at_height(deps.storage, height)?
+        .unwrap_or_default();
+    Ok(TotalStakedAtHeightResponse { total, height })
 }

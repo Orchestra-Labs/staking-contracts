@@ -1,0 +1,8 @@
+[package]
+name = "symphony-utils"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cw-utils = {workspace = true}
+thiserror = {workspace = true}
