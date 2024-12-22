@@ -1,8 +1,7 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::DenomUnit;
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{DenomUnit, Uint128};
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Duration;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -11,11 +10,51 @@ pub struct InstantiateMsg {
     pub unbonding_period: Option<Duration>,
 }
 
+#[cw_ownable_execute]
 #[cw_serde]
-pub enum ExecuteMsg {}
+pub enum ExecuteMsg {
+    UpdateConfig {
+        unbonding_period: Option<Duration>,
+    },
+    Stake {},
+}
 
+#[cw_ownable_query]
 #[cw_serde]
-pub enum QueryMsg {}
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    #[returns(ConfigResponse)]
+    Config {},
+
+    #[returns(StakedBalanceAtHeightResponse)]
+    StakedBalanceAtHeight {
+        address: String,
+        height: Option<u64>,
+    },
+
+    #[returns(TotalStakedAtHeightResponse)]
+    TotalStakedAtHeight {
+        height: Option<u64>,
+    },
+}
 
 #[cw_serde]
 pub struct MigrateMsg {}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub staking_token: DenomUnit,
+    pub unstaking_duration: Option<Duration>,
+}
+
+#[cw_serde]
+pub struct StakedBalanceAtHeightResponse {
+    pub balance: Uint128,
+    pub height: u64,
+}
+
+#[cw_serde]
+pub struct TotalStakedAtHeightResponse {
+    pub total: Uint128,
+    pub height: u64,
+}

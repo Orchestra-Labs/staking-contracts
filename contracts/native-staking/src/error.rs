@@ -9,4 +9,13 @@ pub enum ContractError {
 
     #[error(transparent)]
     UnboundingDurationError(#[from] UnboundingDurationError),
+
+    #[error("No stake amount")]
+    NoStakeAmount {},
+
+    #[error("Invalid denom to stake")]
+    InvalidDenom {},
+
+    #[error(transparent)]
+    Ownership(#[from] cw_ownable::OwnershipError),
 }
