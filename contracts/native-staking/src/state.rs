@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DenomUnit, Uint128};
+use cw_controllers::Claims;
 use cw_storage_plus::{Item, SnapshotItem, SnapshotMap, Strategy};
 use cw_utils::Duration;
 
@@ -27,3 +28,7 @@ pub const STAKED_TOTAL: SnapshotItem<Uint128> = SnapshotItem::new(
 );
 
 pub const BALANCE: Item<Uint128> = Item::new("balance");
+
+pub const MAX_CLAIMS: u64 = 100;
+
+pub const CLAIMS: Claims = Claims::new("claims");

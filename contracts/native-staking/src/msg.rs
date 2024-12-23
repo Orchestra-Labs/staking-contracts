@@ -2,6 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{DenomUnit, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Duration;
+use cw_controllers::ClaimsResponse;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -17,6 +18,8 @@ pub enum ExecuteMsg {
         unbonding_period: Option<Duration>,
     },
     Stake {},
+    Unstake { amount: Uint128 },
+    Claim {},
 }
 
 #[cw_ownable_query]
@@ -36,6 +39,9 @@ pub enum QueryMsg {
     TotalStakedAtHeight {
         height: Option<u64>,
     },
+
+    #[returns(ClaimsResponse)]
+    Claims { address: String },
 }
 
 #[cw_serde]
