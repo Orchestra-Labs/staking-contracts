@@ -42,8 +42,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           toolchain: stable
-          command: wasm
-          args: --locked
+          command: build
+          args: --target wasm32-unknown-unknown --locked
         env:
           RUSTFLAGS: "-C link-arg=-s"
 
