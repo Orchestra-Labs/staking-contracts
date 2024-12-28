@@ -20,15 +20,13 @@ debug-assertions = false
 
 [workspace.dependencies]
 cosmwasm-std = { version = "2.1.4" }
-cosmwasm-storage = { version = "1.5.2" }
 cw-storage-plus = { version = "2.0.0" }
 cw-utils = { version = "2.0.0" }
 cw-ownable = {version = "2.1.0"}
 cw2 = { version = "2.0.0" }
-schemars = { version = "0.8.21" }
-serde = { version = "1.0.215", default-features = false, features = ["derive"] }
 thiserror = { version = "2.0.3" }
 cosmwasm-schema = { version = "2.1.4" }
 cw-multi-test = { version = "2.2.0" }
 
 symphony-utils = { path = "packages/symphony-utils" }
+symphony-interfaces = { path = "packages/symphony-interfaces" }

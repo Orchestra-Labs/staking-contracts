@@ -8,6 +8,6 @@ pub struct RegisteredContract {
     pub token: DenomUnit,
 }
 
-pub const STAKING_CONTRACTS: Map<&Addr, RegisteredContract> = Map::new("staking_contracts");
+pub const STAKING_CONTRACTS: Map<&String, RegisteredContract> = Map::new("staking_contracts");
 
 pub const REWARDS_CONTRACT: Item<Addr> = Item::new("rewards_contract");
