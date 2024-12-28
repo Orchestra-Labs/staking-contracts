@@ -26,7 +26,7 @@ cw-ownable = {version = "2.1.0"}
 cw2 = { version = "2.0.0" }
 thiserror = { version = "2.0.3" }
 cosmwasm-schema = { version = "2.1.4" }
-cw-multi-test = { version = "2.2.0" }
+cw-multi-test = { version = "2.2.0", features = ["cosmwasm_2_0"] }
 
 symphony-utils = { path = "packages/symphony-utils" }
 symphony-interfaces = { path = "packages/symphony-interfaces" }

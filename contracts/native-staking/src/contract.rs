@@ -2,13 +2,13 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, MigrateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse};
+use crate::msg::{ExecuteMsg, MigrateMsg, QueryMsg, TotalStakedAtHeightResponse};
 use crate::state::{Config, CLAIMS, CONFIG, MAX_CLAIMS, STAKED_BALANCES, STAKED_TOTAL};
 use cosmwasm_std::{coin, to_json_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128};
 use cw2::set_contract_version;
 use cw_controllers::ClaimsResponse;
 use cw_ownable::get_ownership;
-use symphony_interfaces::staking::InstantiateMsg;
+use symphony_interfaces::staking::{InstantiateMsg, StakedBalanceAtHeightResponse};
 use symphony_utils::duration::validate_duration;
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-native-staking";

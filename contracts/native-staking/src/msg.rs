@@ -3,6 +3,7 @@ use cosmwasm_std::{DenomUnit, Uint128};
 use cw_controllers::ClaimsResponse;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Duration;
+use symphony_interfaces::staking::StakedBalanceAtHeightResponse;
 
 
 #[cw_ownable_execute]
@@ -45,12 +46,6 @@ pub struct MigrateMsg {}
 pub struct ConfigResponse {
     pub staking_token: DenomUnit,
     pub unstaking_duration: Option<Duration>,
-}
-
-#[cw_serde]
-pub struct StakedBalanceAtHeightResponse {
-    pub balance: Uint128,
-    pub height: u64,
 }
 
 #[cw_serde]

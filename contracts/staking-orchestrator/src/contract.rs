@@ -1,9 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use std::collections::HashMap;
 use std::hash::Hash;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, QueryMsg, StakingContractByDenomResponse};
 use crate::state::{RegisteredContract, STAKING_CONTRACTS};
 use cosmwasm_std::{to_json_binary, Binary, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
 use cw2::set_contract_version;
@@ -66,6 +67,8 @@ pub fn execute_create_staking_contract(
     unbonding_period: Option<Duration>,
     owner: Option<String>,
 ) -> Result<Response<Empty>, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
     let selected_owner = deps.api.addr_validate(
         owner.as_deref().unwrap_or(env.contract.address.as_str())
     )?;
@@ -97,10 +100,54 @@ pub fn execute_create_staking_contract(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&get_ownership(deps.storage)?),
+        QueryMsg::StakingContractByDenom { denom } =>
+            to_json_binary(&query_staking_contract_by_denom(deps, denom)?),
+        QueryMsg::AllTokensStakedBalanceAtHeight { address, height } =>
+            to_json_binary(&query_all_tokens_staked_balance_at_height(deps, address, height)?),
     }
+}
+
+pub fn query_staking_contract_by_denom(deps: Deps, denom: String) -> StdResult<StakingContractByDenomResponse> {
+    let registered_contract = STAKING_CONTRACTS.load(deps.storage, &denom)?;
+
+    Ok(StakingContractByDenomResponse {
+        denom,
+        registered_contract,
+    })
+}
+
+pub fn query_all_tokens_staked_balance_at_height(
+    deps: Deps,
+    address: String,
+    height: Option<u64>
+) -> StdResult<AllTokensStakedBalanceAtHeightResponse> {
+    let mut tokens_staked_balance = HashMap::new();
+
+    let contracts = STAKING_CONTRACTS
+        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|item| item.map(|(_, v)| v))
+        .collect::<StdResult<Vec<_>>>()?;
+
+    for contract in contracts {
+        let result: symphony_interfaces::staking::StakedBalanceAtHeightResponse = deps.querier.query_wasm_smart(
+            contract.address.clone(),
+            &native_staking::msg::QueryMsg::StakedBalanceAtHeight {
+                address: address.clone(),
+                height,
+            },
+        )?;
+
+        tokens_staked_balance.insert(contract.token.denom, result);
+    }
+
+
+
+    Ok(AllTokensStakedBalanceAtHeightResponse {
+        tokens_staked_balance,
+    })
 }
 
 fn query_staking_contract(deps: Deps, address: String) -> StdResult<RegisteredContract> {
@@ -127,9 +174,33 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     }
 }
 
+fn decode_and_handle_binary_data(deps: DepsMut, bin: &Binary) -> StdResult<Response> {
+    let decoded = parse_instantiate_response_data(&bin)
+        .map_err(|e| StdError::generic_err(format!("parsing submsg response: {}", e)))?;
+
+    let contract_config = query_staking_contract(
+        deps.as_ref(),
+        decoded.contract_address.clone()
+    )?;
+
+    let contract = RegisteredContract {
+        address: decoded.contract_address.clone(),
+        token: contract_config.token.clone(),
+    };
+
+    STAKING_CONTRACTS.save(deps.storage, &contract_config.token.denom, &contract)?;
+
+    Ok(
+        Response::new()
+            .add_attribute("action", "create_staking_contract")
+            .add_attribute("denom", contract.token.denom)
+            .add_attribute("address", decoded.contract_address)
+    )
+}
+
 fn handle_instantiate_staking_reply(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     msg: Reply,
 ) -> StdResult<Response> {
     match msg.result.into_result() {
@@ -139,25 +210,15 @@ fn handle_instantiate_staking_reply(
         Ok(sub_msg) => {
             match sub_msg.data {
                 None => {
-                    Err(StdError::generic_err("SubMsg failed: no data"))
+                    match sub_msg.msg_responses.first() {
+                        None => Err(StdError::generic_err("No submsg response")),
+                        Some(response) => {
+                            decode_and_handle_binary_data(deps, &response.value)
+                        }
+                    }
                 }
                 Some(bin) => {
-                    let decoded = parse_instantiate_response_data(&bin)
-                        .map_err(|e| StdError::generic_err(format!("parsing submsg response: {}", e)))?;
-
-                    let contract_config = query_staking_contract(
-                        deps.as_ref(),
-                        decoded.contract_address.clone()
-                    )?;
-
-                    let contract = RegisteredContract {
-                        address: decoded.contract_address.clone(),
-                        token: contract_config.token,
-                    };
-
-                    STAKING_CONTRACTS.save(deps.storage, &decoded.contract_address, &contract)?;
-
-                    Ok(Response::new())
+                    decode_and_handle_binary_data(deps, &bin)
                 }
             }
         }
