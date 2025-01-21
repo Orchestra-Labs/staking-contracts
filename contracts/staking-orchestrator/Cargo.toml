@@ -34,7 +34,7 @@ cosmwasm-schema = { workspace = true }
 cw2 = { workspace = true }
 symphony-interfaces = { workspace = true }
 serde-json-wasm = { version = "1.0.1" }
+native-staking = { path = "../../contracts/native-staking" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
-native-staking = { path = "../../contracts/native-staking" }
