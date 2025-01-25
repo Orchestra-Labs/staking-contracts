@@ -1052,9 +1052,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.134"
+version = "1.0.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d00f4175c42ee48b15416f6193a959ba3a0d67fc699a0db9ad12df9f83991c7d"
+checksum = "930cfb6e6abf99298aaad7d29abbef7a9999a9a8806a40088f55f0dcec03146b"
 dependencies = [
  "itoa",
  "memchr",
@@ -1101,6 +1101,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "staking-rewards"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-ownable",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "symphony-utils",
+ "thiserror 2.0.9",
+]
+
+[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1125,6 +1139,7 @@ dependencies = [
 name = "symphony-utils"
 version = "0.1.0"
 dependencies = [
+ "cosmwasm-std",
  "cw-utils",
  "thiserror 2.0.9",
 ]

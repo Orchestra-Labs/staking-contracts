@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 cw-utils = {workspace = true}
 thiserror = {workspace = true}
+cosmwasm-std = {workspace = true}
