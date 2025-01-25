@@ -18,5 +18,5 @@ pub enum ContractError {
     },
 
     #[error("Cannot instantiate staking contract")]
-    SubContractInstantiationFailed {}
+    SubContractInstantiationFailed {},
 }

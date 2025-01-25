@@ -1,10 +1,10 @@
 use crate::state::RegisteredContract;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{DenomUnit, Uint128};
+use cosmwasm_std::DenomUnit;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Duration;
 use std::collections::HashMap;
-use symphony_interfaces::staking::StakedBalanceAtHeightResponse;
+use symphony_interfaces::staking::{StakedBalanceAtHeightResponse, StakerBalanceResponse};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -32,6 +32,9 @@ pub enum QueryMsg {
 
     #[returns(AllTokensStakedBalanceAtHeightResponse)]
     AllTokensStakedBalanceAtHeight { address: String, height: Option<u64> },
+
+    #[returns(ListStakersByDenomResponse)]
+    ListStakersByDenom { denom: String, start_after: Option<String>, limit: Option<u32> },
 }
 
 #[cw_serde]
@@ -43,4 +46,10 @@ pub struct StakingContractByDenomResponse {
 #[cw_serde]
 pub struct AllTokensStakedBalanceAtHeightResponse {
     pub tokens_staked_balance: HashMap<String, StakedBalanceAtHeightResponse>,
+}
+
+#[cw_serde]
+pub struct ListStakersByDenomResponse {
+    pub denom: String,
+    pub stakers: Vec<StakerBalanceResponse>,
 }

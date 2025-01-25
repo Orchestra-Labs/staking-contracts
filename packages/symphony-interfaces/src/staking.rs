@@ -14,3 +14,9 @@ pub struct StakedBalanceAtHeightResponse {
     pub balance: Uint128,
     pub height: u64,
 }
+
+#[cw_serde]
+pub struct StakerBalanceResponse {
+    pub address: String,
+    pub balance: Uint128,
+}

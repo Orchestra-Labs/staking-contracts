@@ -1,5 +1,5 @@
-use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, QueryMsg, StakingContractByDenomResponse};
-use cosmwasm_std::{coin, Addr, BlockInfo, Coin, DenomUnit, Empty, Uint128};
+use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, ListStakersByDenomResponse, QueryMsg, StakingContractByDenomResponse};
+use cosmwasm_std::{coin, Addr, BlockInfo, Coin, DenomUnit, Empty, StdResult, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
 const OWNER: &str = "owner";
@@ -216,4 +216,75 @@ pub fn query_all_staked_tokens() {
     assert_eq!(all_staked.tokens_staked_balance.len(), 2);
     assert_eq!(all_staked.tokens_staked_balance.get("ustake").unwrap().balance, Uint128::new(100));
     assert_eq!(all_staked.tokens_staked_balance.get("ucoin").unwrap().balance, Uint128::zero());
+}
+
+#[test]
+pub fn query_list_stakers_by_denom() {
+    let mut app = mock_app();
+    let owner_address = app.api().addr_make(OWNER);
+    let orchestrator_contract = instantiate_orchestrator(
+        &mut app,
+        Some(owner_address.clone().into()),
+    );
+
+    let staking_code_id = app.store_code(native_staking_contract());
+    let denom_unit = "ustake";
+    let msg = ExecuteMsg::CreateStakingContract {
+        code_id: staking_code_id,
+        denom_unit: DenomUnit {
+            denom: denom_unit.to_string(),
+            exponent: 6,
+            aliases: vec![],
+        },
+        unbonding_period: None,
+        owner: None,
+    };
+
+    let _ = app.execute_contract(
+        owner_address.clone(),
+        orchestrator_contract.clone(),
+        &msg,
+        &[],
+    ).unwrap();
+
+    let err: StdResult<ListStakersByDenomResponse> = app.wrap().query_wasm_smart(
+        orchestrator_contract.clone(),
+        &QueryMsg::ListStakersByDenom {
+            denom: "ucoin".to_string(),
+            start_after: None,
+            limit: None,
+        },
+    );
+
+    assert_eq!(err.unwrap_err().to_string(), "Generic error: Querier contract error: ucoin not found");
+
+    let contract_data: StakingContractByDenomResponse = app.wrap().query_wasm_smart(
+        orchestrator_contract.clone(),
+        &QueryMsg::StakingContractByDenom {
+            denom: "ustake".to_string(),
+        },
+    ).unwrap();
+
+    mint_native(&mut app, owner_address.clone().into_string(), "ustake".to_string(), 200);
+    let staking_contract = contract_data.registered_contract.address;
+
+    stake_tokens(
+        &mut app,
+        Uint128::new(100),
+        "ustake",
+        Addr::unchecked(staking_contract)
+    );
+
+    next_block(&mut app);
+
+    let stakers: ListStakersByDenomResponse = app.wrap().query_wasm_smart(
+        orchestrator_contract.clone(),
+        &QueryMsg::ListStakersByDenom {
+            denom: "ustake".to_string(),
+            start_after: None,
+            limit: None,
+        },
+    ).unwrap();
+
+    assert_eq!(stakers.stakers.len(), 1);
 }

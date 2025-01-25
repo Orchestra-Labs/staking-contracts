@@ -1,10 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use crate::error::ContractError;
-use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, QueryMsg, StakingContractByDenomResponse};
+use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, ListStakersByDenomResponse, QueryMsg, StakingContractByDenomResponse};
 use crate::state::{RegisteredContract, STAKING_CONTRACTS};
 use cosmwasm_std::{to_json_binary, Binary, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
 use cw2::set_contract_version;
@@ -107,6 +106,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&query_staking_contract_by_denom(deps, denom)?),
         QueryMsg::AllTokensStakedBalanceAtHeight { address, height } =>
             to_json_binary(&query_all_tokens_staked_balance_at_height(deps, address, height)?),
+        QueryMsg::ListStakersByDenom { denom, start_after, limit } =>
+            to_json_binary(&query_list_stakers_by_denom(deps, denom, start_after, limit)?),
     }
 }
 
@@ -150,7 +151,7 @@ pub fn query_all_tokens_staked_balance_at_height(
     })
 }
 
-fn query_staking_contract(deps: Deps, address: String) -> StdResult<RegisteredContract> {
+fn query_staking_contract_config(deps: Deps, address: String) -> StdResult<RegisteredContract> {
     let result: native_staking::msg::ConfigResponse = deps.querier.query_wasm_smart(
         address.clone(),
         &native_staking::msg::QueryMsg::Config {},
@@ -162,6 +163,34 @@ fn query_staking_contract(deps: Deps, address: String) -> StdResult<RegisteredCo
     };
 
     Ok(contract)
+}
+
+fn query_list_stakers_by_denom(deps: Deps, denom: String, start_after: Option<String>, limit: Option<u32>) -> StdResult<ListStakersByDenomResponse> {
+    let contract = STAKING_CONTRACTS.may_load(deps.storage, &denom)?;
+
+    match contract {
+        None => Err(StdError::not_found(denom)),
+        Some(contract) => {
+            let stakers = query_staking_contract_for_list_stakers(deps, &contract.address, start_after, limit)?;
+
+            Ok(ListStakersByDenomResponse {
+                denom,
+                stakers: stakers.stakers,
+            })
+        }
+    }
+}
+
+fn query_staking_contract_for_list_stakers(deps: Deps, contract_addr: &str, start_after: Option<String>, limit: Option<u32>) -> StdResult<native_staking::msg::ListStakersResponse> {
+    let stakers = deps.querier.query_wasm_smart(
+        contract_addr,
+        &native_staking::msg::QueryMsg::ListStakers {
+            start_after,
+            limit,
+        },
+    )?;
+
+    Ok(stakers)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -178,7 +207,7 @@ fn decode_and_handle_binary_data(deps: DepsMut, bin: &Binary) -> StdResult<Respo
     let decoded = parse_instantiate_response_data(&bin)
         .map_err(|e| StdError::generic_err(format!("parsing submsg response: {}", e)))?;
 
-    let contract_config = query_staking_contract(
+    let contract_config = query_staking_contract_config(
         deps.as_ref(),
         decoded.contract_address.clone()
     )?;
@@ -198,6 +227,7 @@ fn decode_and_handle_binary_data(deps: DepsMut, bin: &Binary) -> StdResult<Respo
     )
 }
 
+#[allow(deprecated)]
 fn handle_instantiate_staking_reply(
     deps: DepsMut,
     _env: Env,
