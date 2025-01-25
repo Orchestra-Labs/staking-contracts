@@ -1,0 +1,9 @@
+[package]
+name = "symphony-interfaces"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cw-utils = { workspace = true }
+cosmwasm-std = { workspace = true }

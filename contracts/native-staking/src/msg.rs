@@ -1,15 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{DenomUnit, Uint128};
+use cw_controllers::ClaimsResponse;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use cw_utils::Duration;
-use cw_controllers::ClaimsResponse;
+use symphony_interfaces::staking::{StakedBalanceAtHeightResponse, StakerBalanceResponse};
 
-#[cw_serde]
-pub struct InstantiateMsg {
-    pub owner: Option<String>,
-    pub denom_unit: DenomUnit,
-    pub unbonding_period: Option<Duration>,
-}
 
 #[cw_ownable_execute]
 #[cw_serde]
@@ -42,6 +37,9 @@ pub enum QueryMsg {
 
     #[returns(ClaimsResponse)]
     Claims { address: String },
+
+    #[returns(ListStakersResponse)]
+    ListStakers { start_after: Option<String>, limit: Option<u32> },
 }
 
 #[cw_serde]
@@ -54,13 +52,12 @@ pub struct ConfigResponse {
 }
 
 #[cw_serde]
-pub struct StakedBalanceAtHeightResponse {
-    pub balance: Uint128,
+pub struct TotalStakedAtHeightResponse {
+    pub total: Uint128,
     pub height: u64,
 }
 
 #[cw_serde]
-pub struct TotalStakedAtHeightResponse {
-    pub total: Uint128,
-    pub height: u64,
+pub struct ListStakersResponse {
+    pub stakers: Vec<StakerBalanceResponse>,
 }

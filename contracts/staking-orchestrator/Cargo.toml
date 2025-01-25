@@ -1,5 +1,5 @@
 [package]
-name = "native-staking"
+name = "staking-orchestrator"
 version.workspace = true
 edition.workspace = true
 authors = ["symphony-dev-team"]
@@ -29,12 +29,12 @@ cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-utils = { workspace = true }
 cw-ownable = { workspace = true }
-cw2 = { workspace = true }
 thiserror = { workspace = true }
 cosmwasm-schema = { workspace = true }
-symphony-utils = { workspace = true }
+cw2 = { workspace = true }
 symphony-interfaces = { workspace = true }
-cw-controllers = { version = "2.0.0" }
+serde-json-wasm = { version = "1.0.1" }
+native-staking = { path = "../../contracts/native-staking" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

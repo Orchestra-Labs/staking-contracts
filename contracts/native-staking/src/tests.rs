@@ -1,11 +1,12 @@
+use crate::error::ContractError;
+use crate::msg::{ExecuteMsg, ListStakersResponse, QueryMsg, TotalStakedAtHeightResponse};
+use crate::state::Config;
 use cosmwasm_std::{coin, Addr, BlockInfo, Coin, DenomUnit, Empty, Uint128};
 use cw_controllers::ClaimsResponse;
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use cw_ownable::{Action, Ownership};
 use cw_utils::{Duration, Expiration};
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse};
-use crate::state::Config;
+use symphony_interfaces::staking::{InstantiateMsg, StakedBalanceAtHeightResponse};
 
 const OWNER: &str = "owner";
 const TIME_BETWEEN_BLOCKS: u64 = 5;
@@ -599,4 +600,56 @@ pub fn execute_unstake_with_unbound_period_should_fail_before_time() {
     ).unwrap();
 
     assert_eq!(balance.amount, Uint128::from(99_900u128));
+}
+
+#[test]
+pub fn query_list_stakers_should_return_all_stakers() {
+    let mut app = &mut mock_app();
+    let native_token = DenomUnit {
+        denom: "ustake".to_string(),
+        exponent: 6,
+        aliases: vec![],
+    };
+    let unbounding_duration = Some(Duration::Time(15));
+    let staking_contract = instantiate_staking(
+        &mut app,
+        None,
+        &native_token,
+        &unbounding_duration
+    );
+
+    // cycle between 1 and 100 to test pagination
+    for i in 1..101 {
+        let user_name = format!("user_{}", i);
+        let user = app.api().addr_make(&user_name);
+        mint_native(&mut app, user.to_string(), "ustake".to_string(), 100_000u128);
+
+        let msg = ExecuteMsg::Stake {};
+        let _ = app.execute_contract(user.clone(), staking_contract.clone(), &msg, &[
+            Coin {
+                denom: "ustake".to_string(),
+                amount: Uint128::from(100u128),
+            }
+        ]);
+    }
+    next_block(&mut app); // move to next block to update staked balance
+
+    let first_response: ListStakersResponse = app.wrap().query_wasm_smart(staking_contract.clone(), &QueryMsg::ListStakers {
+        start_after: None,
+        limit: Some(20),
+    }).unwrap();
+
+    assert_eq!(first_response.stakers.len(), 20);
+
+    let last_response: ListStakersResponse = app.wrap().query_wasm_smart(staking_contract.clone(), &QueryMsg::ListStakers {
+        start_after: Some(first_response.stakers.last().unwrap().address.clone()),
+        limit: Some(80),
+    }).unwrap();
+
+    assert_eq!(last_response.stakers.len(), 80);
+
+    // the intersection should be empty
+    assert_eq!(first_response.stakers.iter().any(|x| last_response.stakers.contains(x)), false);
+    // the union should be equal to the total number of stakers
+    assert_eq!(first_response.stakers.len() + last_response.stakers.len(), 100);
 }

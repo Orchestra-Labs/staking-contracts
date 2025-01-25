@@ -2,12 +2,14 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse};
+use crate::msg::{ExecuteMsg, ListStakersResponse, MigrateMsg, QueryMsg, TotalStakedAtHeightResponse};
 use crate::state::{Config, CLAIMS, CONFIG, MAX_CLAIMS, STAKED_BALANCES, STAKED_TOTAL};
-use cosmwasm_std::{coin, to_json_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{coin, to_json_binary, Addr, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128};
 use cw2::set_contract_version;
 use cw_controllers::ClaimsResponse;
 use cw_ownable::get_ownership;
+use cw_storage_plus::Bound;
+use symphony_interfaces::staking::{InstantiateMsg, StakedBalanceAtHeightResponse, StakerBalanceResponse};
 use symphony_utils::duration::validate_duration;
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-native-staking";
@@ -27,14 +29,20 @@ pub fn instantiate(
     validate_duration(msg.unbonding_period)?;
 
     let config= Config {
-        staking_token: msg.denom_unit,
+        staking_token: msg.denom_unit.clone(),
         unstaking_duration: msg.unbonding_period,
     };
 
     CONFIG.save(deps.storage, &config)?;
 
     STAKED_TOTAL.save(deps.storage, &Uint128::zero(), env.block.height)?;
-    Ok(Response::new())
+    Ok(
+        Response::new()
+            .add_attribute("action", "instantiate")
+            .add_attribute("owner", owner)
+            .add_attribute("denom", msg.denom_unit.denom)
+            .add_attribute("token_exponent", msg.denom_unit.exponent.to_string())
+    )
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -262,6 +270,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::StakedBalanceAtHeight { address, height } => to_json_binary(&query_staked_balance(deps, env, address, height)?),
         QueryMsg::TotalStakedAtHeight { height } => to_json_binary(&query_total_staked_at_height(deps, env, height)?),
         QueryMsg::Claims { address} => to_json_binary(&query_claims(deps, address)?),
+        QueryMsg::ListStakers { start_after, limit } => {
+            to_json_binary(&query_all_stakers(deps, start_after, limit)?)
+        }
     }
 }
 
@@ -294,4 +305,32 @@ pub fn query_claims(
     address: String,
 ) -> StdResult<ClaimsResponse> {
     CLAIMS.query_claims(deps, &deps.api.addr_validate(&address)?)
+}
+
+pub fn query_all_stakers(deps: Deps, start_after: Option<String>, limit: Option<u32>) -> StdResult<ListStakersResponse> {
+    let valid_start_addr: Option<Addr> = start_after
+        .as_ref()
+        .map(|addr| deps.api.addr_validate(addr))
+        .transpose()?;
+
+    let start_addr = valid_start_addr
+        .as_ref()
+        .map(|addr| Bound::exclusive(addr));
+
+    let num_elements = match limit {
+        Some(limit) => limit as usize,
+        None => usize::MAX,
+    };
+
+    let stakers: Vec<StakerBalanceResponse> = STAKED_BALANCES
+        .range(deps.storage, start_addr, None, cosmwasm_std::Order::Ascending)
+        .take(num_elements)
+        .filter_map(|item| item.ok()) // Gracefully handle potential errors.
+        .map(|(addr, balance)| StakerBalanceResponse {
+            address: addr.to_string(),
+            balance,
+        })
+        .collect();
+
+    Ok(ListStakersResponse { stakers })
 }
