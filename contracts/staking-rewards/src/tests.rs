@@ -1,5 +1,5 @@
-use crate::msg::{InstantiateMsg, QueryMsg};
-use crate::state::{Config, RewardsDistributionByToken};
+use crate::msg::{ConfigResponse, InstantiateMsg, ListPoolStatesResponse, QueryMsg};
+use crate::state::RewardsDistributionByToken;
 use cosmwasm_std::{coin, Addr, BlockInfo, DenomUnit, Empty, Uint64};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
@@ -97,12 +97,20 @@ pub fn staking_rewards_instantiate() {
     let _ = app.contract_data(&rewards_contract).unwrap();
 
     // check config
-    let config: Config = app.wrap().query_wasm_smart(
+    let config: ConfigResponse = app.wrap().query_wasm_smart(
         rewards_contract.clone(),
         &QueryMsg::Config {},
     ).unwrap();
 
-    assert_eq!(config.staking_orchestrator_addr, orchestrator_contract);
+    assert_eq!(config.staking_orchestrator_addr, orchestrator_contract.into_string());
     assert_eq!(config.reward_token, reward_denom);
     assert_eq!(config.rewards_distribution, rewards_distribution);
+
+    let pool_states: ListPoolStatesResponse = app.wrap().query_wasm_smart(
+        rewards_contract.clone(),
+        &QueryMsg::AllPoolStates {},
+    ).unwrap();
+
+    assert_eq!(pool_states.pool_states.len(), 2);
+    println!("{:?}", pool_states);
 }

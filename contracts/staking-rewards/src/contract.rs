@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg};
 use crate::state::{Config, PoolState, RewardsDistributionByToken, CONFIG, POOL_STATE};
 use cosmwasm_std::{to_json_binary, BankQuery, Binary, BlockInfo, Coin, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, QueryRequest, Response, StdResult, Uint128, Uint64};
 use cw2::set_contract_version;
@@ -153,10 +153,43 @@ fn query_contract_bank_balance(deps: &DepsMut, denom: &str, contract_addr: &str)
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
+        QueryMsg::AllPoolStates {} => to_json_binary(&query_all_pool_states(deps)?),
     }
 }
 
-fn query_config(deps: Deps) -> StdResult<Config> {
-    CONFIG.load(deps.storage)
+fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+    let config = CONFIG.load(deps.storage)?;
+
+    Ok(ConfigResponse {
+        staking_orchestrator_addr: config.staking_orchestrator_addr.to_string(),
+        reward_token: config.reward_token.clone(),
+        rewards_distribution: config.rewards_distribution.clone(),
+    })
+}
+
+fn query_all_pool_states(deps: Deps) -> StdResult<ListPoolStatesResponse> {
+    let pool_states: Vec<PoolState> = POOL_STATE
+        .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+        .map(|item| {
+            let (_, pool_state) = item?;
+            Ok(pool_state)
+        })
+        .collect::<StdResult<Vec<PoolState>>>()?;
+
+    let states = pool_states.iter().map(|pool_state| {
+        PoolStateResponse {
+            denom: pool_state.denom.clone(),
+            total_rewards: pool_state.total_rewards,
+            total_staked: pool_state.total_staked,
+            block_height: pool_state.block_height,
+        }
+    }).collect();
+
+    let pool_states = ListPoolStatesResponse {
+        pool_states: states,
+    };
+
+    Ok(pool_states)
 }
