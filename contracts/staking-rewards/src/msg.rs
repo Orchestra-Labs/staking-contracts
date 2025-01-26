@@ -14,11 +14,15 @@ pub struct InstantiateMsg {
 #[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
-    // UpdateConfig {
-    //     staking_orchestrator_addr: String,
-    //     reward_token: DenomUnit,
-    //     rewards_distribution: Vec<RewardsDistributionByToken>,
-    // },
-    // Distribute {},
-    // Withdraw {},
+    UpdateConfig {
+        staking_orchestrator_addr: Option<String>,
+        reward_token: Option<DenomUnit>,
+        rewards_distribution: Option<Vec<RewardsDistributionByToken>>,
+    },
+    UpdateRewardsState,
+}
+
+#[cw_serde]
+pub enum QueryMsg {
+    Config {},
 }

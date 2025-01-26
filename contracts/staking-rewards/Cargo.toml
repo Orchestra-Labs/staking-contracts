@@ -32,4 +32,6 @@ cw-ownable = { workspace = true }
 thiserror = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cw2 = { workspace = true }
-symphony-utils = { workspace = true }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }

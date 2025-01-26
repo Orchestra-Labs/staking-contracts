@@ -1,5 +1,4 @@
 use cosmwasm_std::StdError;
-use symphony_utils::denom::DenomError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -14,7 +13,4 @@ pub enum ContractError {
     InvalidRewardsDistribution {
         total_weight: u64,
     },
-
-    #[error(transparent)]
-    DenomError (#[from] DenomError),
 }
