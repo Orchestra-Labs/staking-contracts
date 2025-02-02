@@ -1,8 +1,7 @@
-use crate::state::{RewardsDistributionByToken, UserState};
+use crate::state::RewardsDistributionByToken;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{DenomUnit, Uint128, Uint64};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-use std::iter::Map;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -34,9 +33,9 @@ pub enum QueryMsg {
     #[returns(AllUserStatesResponse)]
     AllUserStates {},
     #[returns(PoolStateResponse)]
-    PoolState { denom: String },
+    PoolState { denom: String, block_height: Option<Uint64> },
     #[returns(UserStateResponse)]
-    UserState { address: String },
+    UserState { address: String, block_height: Option<Uint64> },
 }
 
 #[cw_serde]

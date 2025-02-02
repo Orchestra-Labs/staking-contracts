@@ -4,7 +4,7 @@ use cosmwasm_std::entry_point;
 use crate::error::ContractError;
 use crate::msg::{AllUserStatesResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
 use crate::state::{Config, PoolState, RewardsDistributionByToken, UserState, CONFIG, POOL_STATE, USER_STATE};
-use cosmwasm_std::{to_json_binary, Addr, BankQuery, Binary, BlockInfo, Coin, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, QueryRequest, Response, StdResult, Uint128, Uint64};
+use cosmwasm_std::{to_json_binary, Addr, Binary, BlockInfo, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128, Uint64};
 use cw2::set_contract_version;
 use staking_orchestrator::msg::ListStakersByDenomResponse;
 use staking_orchestrator::msg::QueryMsg::ListStakersByDenom;
@@ -135,7 +135,7 @@ fn execute_distribute_rewards(
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    let mut config = crate::state::CONFIG.load(deps.storage)?;
+    let config = crate::state::CONFIG.load(deps.storage)?;
 
     let total_rewards_to_distribute = info.funds.iter().find(|coin| coin.denom == config.reward_token.denom)
         .map(|coin| coin.amount)
@@ -260,27 +260,27 @@ fn query_staking_contract_by_denom(
     }
 }
 
-fn query_contract_bank_balance(deps: &DepsMut, denom: &str, contract_addr: &str) -> Result<Uint128, ContractError> {
-    let balance_request = QueryRequest::Bank(BankQuery::Balance {
-        address: contract_addr.to_string(),
-        denom: denom.to_string(),
-    });
-
-    let balance_response: Coin = deps.querier.query(&balance_request)?;
-
-    let balance = balance_response.amount;
-
-    Ok(balance)
-}
+// fn query_contract_bank_balance(deps: &DepsMut, denom: &str, contract_addr: &str) -> Result<Uint128, ContractError> {
+//     let balance_request = QueryRequest::Bank(BankQuery::Balance {
+//         address: contract_addr.to_string(),
+//         denom: denom.to_string(),
+//     });
+//
+//     let balance_response: Coin = deps.querier.query(&balance_request)?;
+//
+//     let balance = balance_response.amount;
+//
+//     Ok(balance)
+// }
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),
         QueryMsg::Config {} => to_json_binary(&query_config(deps)?),
         QueryMsg::AllPoolStates {} => to_json_binary(&query_all_pool_states(deps)?),
-        QueryMsg::PoolState { denom } => to_json_binary(&query_pool_state(deps, denom)?),
+        QueryMsg::PoolState { denom, block_height } => to_json_binary(&query_pool_state(deps, denom, block_height)?),
         QueryMsg::AllUserStates {} => to_json_binary(&query_all_user_states(deps)?),
-        QueryMsg::UserState { address } => to_json_binary(&query_user_state(deps, address)?),
+        QueryMsg::UserState { address, block_height } => to_json_binary(&query_user_state(deps, address, block_height)?),
     }
 }
 
@@ -318,14 +318,20 @@ fn query_all_pool_states(deps: Deps) -> StdResult<ListPoolStatesResponse> {
     Ok(pool_states)
 }
 
-fn query_pool_state(deps: Deps, denom: String) -> StdResult<PoolStateResponse> {
-    let pool_state = POOL_STATE.load(deps.storage, &denom)?;
+fn query_pool_state(deps: Deps, denom: String, block_height: Option<Uint64>) -> StdResult<PoolStateResponse> {
+    let pool_state = match block_height {
+        None => Some(POOL_STATE.load(deps.storage, &denom)?),
+        Some(height) => POOL_STATE.may_load_at_height(deps.storage, &denom, height.u64())?,
+    };
 
-    Ok(PoolStateResponse {
-        denom: pool_state.denom.clone(),
-        total_rewards: pool_state.total_rewards,
-        block_height: pool_state.block_height,
-    })
+    match pool_state {
+        None => Err(StdError::not_found(denom)),
+        Some(pool_state) => Ok(PoolStateResponse {
+            denom: pool_state.denom.clone(),
+            total_rewards: pool_state.total_rewards,
+            block_height: pool_state.block_height,
+        }),
+    }
 }
 
 fn query_all_user_states(
@@ -349,11 +355,17 @@ fn query_all_user_states(
     Ok(user_states)
 }
 
-fn query_user_state(deps: Deps, address: String) -> StdResult<UserStateResponse> {
-    let user_state = USER_STATE.load(deps.storage, &Addr::unchecked(&address))?;
+fn query_user_state(deps: Deps, address: String, block_height: Option<Uint64>) -> StdResult<UserStateResponse> {
+    let user_state = match block_height {
+        None => Some(USER_STATE.load(deps.storage, &Addr::unchecked(&address))?),
+        Some(height) => USER_STATE.may_load_at_height(deps.storage, &Addr::unchecked(&address), height.u64())?,
+    };
 
-    Ok(UserStateResponse {
-        address,
-        reward_debt: user_state.reward_debt,
-    })
+    match user_state {
+        None => Err(StdError::not_found(address)),
+        Some(user_state) => Ok(UserStateResponse {
+            address,
+            reward_debt: user_state.reward_debt,
+        })
+    }
 }

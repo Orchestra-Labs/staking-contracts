@@ -7,7 +7,7 @@ use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
 const OWNER: &str = "owner";
 const STAKERA: &str = "stakera";
-const STAKERB: &str = "stakerb";
+// const STAKERB: &str = "stakerb";
 const STAKE_DENOM: &str = "ustake";
 const REWARD_DENOM: &str = "urev";
 
@@ -207,7 +207,7 @@ fn stake_some_tokens(app: &mut App, user: &Addr, orchestrator_addr: &Addr, denom
 pub fn distribute_rewards() {
     let mut app = mock_app();
     let owner_address = app.api().addr_make(OWNER);
-    let stakerA = app.api().addr_make(STAKERA);
+    let staker_a = app.api().addr_make(STAKERA);
 
     let orchestrator_addr = instantiate_orchestrator(&mut app, "ustake");
 
@@ -237,7 +237,7 @@ pub fn distribute_rewards() {
 
     let _ = app.contract_data(&rewards_contract).unwrap();
 
-    stake_some_tokens(&mut app, &stakerA, &orchestrator_addr, STAKE_DENOM, 100);
+    stake_some_tokens(&mut app, &staker_a, &orchestrator_addr, STAKE_DENOM, 100);
     next_block(&mut app);
 
     mint_native(&mut app, owner_address.as_str(), REWARD_DENOM, 1_000_000);
@@ -271,6 +271,7 @@ pub fn distribute_rewards() {
         rewards_contract.clone(),
         &QueryMsg::PoolState {
             denom: STAKE_DENOM.to_string(),
+            block_height: None,
         },
     ).unwrap();
 
@@ -279,7 +280,8 @@ pub fn distribute_rewards() {
     let user_state: UserStateResponse = app.wrap().query_wasm_smart(
         rewards_contract.clone(),
         &QueryMsg::UserState {
-            address: stakerA.to_string(),
+            address: staker_a.to_string(),
+            block_height: None,
         },
     ).unwrap();
 
