@@ -1,7 +1,8 @@
-use crate::state::RewardsDistributionByToken;
+use crate::state::{RewardsDistributionByToken, UserState};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{DenomUnit, Uint128, Uint64};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
+use std::iter::Map;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -19,7 +20,7 @@ pub enum ExecuteMsg {
         reward_token: Option<DenomUnit>,
         rewards_distribution: Option<Vec<RewardsDistributionByToken>>,
     },
-    UpdateRewardsState,
+    DistributeRewards
 }
 
 #[cw_ownable_query]
@@ -30,6 +31,12 @@ pub enum QueryMsg {
     Config {},
     #[returns(ListPoolStatesResponse)]
     AllPoolStates {},
+    #[returns(AllUserStatesResponse)]
+    AllUserStates {},
+    #[returns(PoolStateResponse)]
+    PoolState { denom: String },
+    #[returns(UserStateResponse)]
+    UserState { address: String },
 }
 
 #[cw_serde]
@@ -43,11 +50,27 @@ pub struct ConfigResponse {
 pub struct PoolStateResponse {
     pub denom: DenomUnit,
     pub total_rewards: Uint128,
-    pub total_staked: Uint128,
     pub block_height: Uint64,
 }
 
 #[cw_serde]
 pub struct ListPoolStatesResponse {
     pub pool_states: Vec<PoolStateResponse>,
+}
+
+#[cw_serde]
+pub struct AllUserStatesResponse {
+    pub user_states: Vec<UserStateResponse>,
+}
+
+#[cw_serde]
+pub struct PoolStateByDenom {
+    pub denom: DenomUnit,
+    pub total_rewards: Uint128,
+}
+
+#[cw_serde]
+pub struct UserStateResponse {
+    pub address: String,
+    pub reward_debt: Uint128,
 }

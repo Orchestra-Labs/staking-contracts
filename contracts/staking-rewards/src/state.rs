@@ -19,13 +19,11 @@ pub struct Config {
 pub struct PoolState {
     pub denom: DenomUnit,
     pub total_rewards: Uint128,
-    pub total_staked: Uint128,
     pub block_height: Uint64,
 }
 
 #[cw_serde]
 pub struct UserState {
-    pub staked: Uint128,
     pub reward_debt: Uint128,
 }
 
@@ -36,7 +34,7 @@ pub const POOL_STATE: SnapshotMap<&str, PoolState> = SnapshotMap::new(
     "pool_state__changelog",
     Strategy::EveryBlock,
 );
-pub const USER_STATE: SnapshotMap<(&str, &Addr), UserState> = SnapshotMap::new(
+pub const USER_STATE: SnapshotMap<&Addr, UserState> = SnapshotMap::new(
     "user_state",
     "user_state__checkpoints",
     "user_state__changelog",

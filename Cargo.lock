@@ -1111,6 +1111,9 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "native-staking",
+ "staking-orchestrator",
+ "symphony-interfaces",
  "thiserror 2.0.9",
 ]
 

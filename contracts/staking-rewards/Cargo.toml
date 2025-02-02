@@ -32,6 +32,9 @@ cw-ownable = { workspace = true }
 thiserror = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cw2 = { workspace = true }
+symphony-interfaces = { workspace = true }
+staking-orchestrator = { path = "../../contracts/staking-orchestrator" }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }
+native-staking = { path = "../../contracts/native-staking" }

@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -13,4 +13,13 @@ pub enum ContractError {
     InvalidRewardsDistribution {
         total_weight: u64,
     },
+
+    #[error("Invalid rewards amount, should be greater than zero")]
+    NoRewardsToDistribute,
+
+    #[error(transparent)]
+    OverflowError(#[from] OverflowError),
+
+    #[error(transparent)]
+    DivideByZeroError(#[from] DivideByZeroError),
 }
