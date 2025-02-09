@@ -1,9 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use std::collections::HashMap;
 
 use crate::error::ContractError;
 use crate::msg::{AllUserStatesResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
-use crate::state::{Config, PoolState, RewardsDistributionByToken, UserState, CONFIG, POOL_STATE, USER_STATE};
+use crate::state::{Config, PoolState, RewardsDistributionByToken, RewardsRecord, UserState, CONFIG, POOL_STATE, USER_STATE};
 use cosmwasm_std::{to_json_binary, Addr, Binary, BlockInfo, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128, Uint64};
 use cw2::set_contract_version;
 use staking_orchestrator::msg::ListStakersByDenomResponse;
@@ -86,6 +87,7 @@ pub fn execute(deps: DepsMut,
             rewards_distribution,
         } => execute_update_config(deps, info, staking_orchestrator_addr, reward_token, rewards_distribution),
         ExecuteMsg::DistributeRewards => execute_distribute_rewards(deps, env, info),
+        ExecuteMsg::ClaimRewards => execute_claim_rewards(deps, env, info),
     }
 }
 
@@ -174,18 +176,27 @@ fn execute_distribute_rewards(
         )?;
 
         for staker in stakers.stakers {
-            let user_state = USER_STATE.load(
+            let mut user_state = USER_STATE.load(
                 deps.storage,
                 &Addr::unchecked(&staker.address)
             ).unwrap_or(UserState {
                 reward_debt: Uint128::zero(),
+                last_claim_block_height: Uint64::zero(),
+                rewards_data: HashMap::new(),
             });
             let user_rewards = staker.balance
                 .checked_mul(denom_rewards)?
                 .checked_div(stakers.total_staked)?;
 
+            let values = user_state.rewards_data
+                .entry(distro.denom.denom.clone())
+                .or_insert_with(|| RewardsRecord { rewards: Uint128::zero() });
+            values.rewards = values.rewards.checked_add(user_rewards)?;
+
             let updated_user_state = UserState {
                 reward_debt: user_state.reward_debt.checked_add(user_rewards)?,
+                last_claim_block_height: user_state.last_claim_block_height,
+                rewards_data: user_state.rewards_data,
             };
 
             USER_STATE.save(
@@ -258,6 +269,58 @@ fn query_staking_contract_by_denom(
             }
         }
     }
+}
+
+fn execute_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    let user_state = USER_STATE.load(deps.storage, &info.sender)?;
+
+    // send rewards to user
+    let total_rewards = user_state.reward_debt;
+    let rewards_data = user_state.rewards_data;
+    let rev_denom = config.reward_token.denom.clone();
+
+    if total_rewards.is_zero() {
+        return Err(ContractError::NoRewardsToClaim {});
+    }
+
+    let rewards_msg = cosmwasm_std::CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: vec![cosmwasm_std::Coin {
+            denom: rev_denom,
+            amount: total_rewards,
+        }],
+    });
+
+    for reward in rewards_data {
+        let denom = reward.0;
+        let record = reward.1;
+        let pool_state = POOL_STATE.load(deps.storage, &denom)?;
+
+        let updated_total_rewards = pool_state.total_rewards.checked_sub(record.rewards)?;
+        let updated_pool_state = PoolState {
+            denom: pool_state.denom,
+            total_rewards: updated_total_rewards,
+            block_height: Uint64::from(env.block.height),
+        };
+
+        POOL_STATE.save(deps.storage, &denom, &updated_pool_state, env.block.height)?;
+    }
+
+    let updated_user_state = UserState {
+        reward_debt: Uint128::zero(),
+        last_claim_block_height: Uint64::from(env.block.height),
+        rewards_data: HashMap::new(),
+    };
+
+    USER_STATE.save(deps.storage, &info.sender, &updated_user_state, env.block.height)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "claim_rewards")
+        .add_attribute("total_rewards", total_rewards)
+        .add_message(rewards_msg)
+    )
 }
 
 // fn query_contract_bank_balance(deps: &DepsMut, denom: &str, contract_addr: &str) -> Result<Uint128, ContractError> {
@@ -344,6 +407,7 @@ fn query_all_user_states(
             Ok(UserStateResponse {
                 address: address.to_string(),
                 reward_debt: user_state.reward_debt,
+                rewards_data: user_state.rewards_data,
             })
         })
         .collect::<StdResult<Vec<UserStateResponse>>>()?;
@@ -366,6 +430,7 @@ fn query_user_state(deps: Deps, address: String, block_height: Option<Uint64>) -
         Some(user_state) => Ok(UserStateResponse {
             address,
             reward_debt: user_state.reward_debt,
+            rewards_data: user_state.rewards_data,
         })
     }
 }

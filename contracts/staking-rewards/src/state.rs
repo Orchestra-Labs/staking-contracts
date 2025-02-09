@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DenomUnit, Uint128, Uint64};
 use cw_storage_plus::{Item, SnapshotMap, Strategy};
+use std::collections::HashMap;
 
 #[cw_serde]
 pub struct RewardsDistributionByToken {
@@ -23,8 +24,15 @@ pub struct PoolState {
 }
 
 #[cw_serde]
+pub struct RewardsRecord {
+    pub rewards: Uint128,
+}
+
+#[cw_serde]
 pub struct UserState {
     pub reward_debt: Uint128,
+    pub last_claim_block_height: Uint64,
+    pub rewards_data: HashMap<String, RewardsRecord>,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

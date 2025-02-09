@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::msg::ExecuteMsg::DistributeRewards;
+use crate::msg::ExecuteMsg::{ClaimRewards, DistributeRewards};
 use crate::msg::{AllUserStatesResponse, ConfigResponse, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
 use crate::state::RewardsDistributionByToken;
 use cosmwasm_std::{coin, Addr, BlockInfo, DenomUnit, Empty, Uint128, Uint64};
@@ -285,5 +285,39 @@ pub fn distribute_rewards() {
         },
     ).unwrap();
 
+    println!("{:?}", user_state);
     assert_eq!(user_state.reward_debt, Uint128::from(1_000_000u128));
+    next_block(&mut app);
+
+    let msg = ClaimRewards {};
+    app.execute_contract(
+        staker_a.clone(),
+        rewards_contract.clone(),
+        &msg,
+        &[],
+    ).unwrap();
+
+    let user_state: UserStateResponse = app.wrap().query_wasm_smart(
+        rewards_contract.clone(),
+        &QueryMsg::UserState {
+            address: staker_a.to_string(),
+            block_height: None,
+        },
+    ).unwrap();
+
+    assert_eq!(user_state.reward_debt, Uint128::zero());
+
+    // check staker_a balance
+    let balance = app.wrap().query_balance(staker_a.clone(), REWARD_DENOM).unwrap();
+    assert_eq!(balance.amount, Uint128::from(1_000_000u128));
+
+    let pool_state: PoolStateResponse = app.wrap().query_wasm_smart(
+        rewards_contract.clone(),
+        &QueryMsg::PoolState {
+            denom: STAKE_DENOM.to_string(),
+            block_height: None,
+        },
+    ).unwrap();
+
+    assert_eq!(pool_state.total_rewards, Uint128::zero());
 }

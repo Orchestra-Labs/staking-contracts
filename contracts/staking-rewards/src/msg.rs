@@ -1,7 +1,8 @@
-use crate::state::RewardsDistributionByToken;
+use crate::state::{RewardsDistributionByToken, RewardsRecord};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{DenomUnit, Uint128, Uint64};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
+use std::collections::HashMap;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -19,7 +20,8 @@ pub enum ExecuteMsg {
         reward_token: Option<DenomUnit>,
         rewards_distribution: Option<Vec<RewardsDistributionByToken>>,
     },
-    DistributeRewards
+    DistributeRewards,
+    ClaimRewards,
 }
 
 #[cw_ownable_query]
@@ -72,4 +74,5 @@ pub struct PoolStateByDenom {
 pub struct UserStateResponse {
     pub address: String,
     pub reward_debt: Uint128,
+    pub rewards_data: HashMap<String, RewardsRecord>,
 }

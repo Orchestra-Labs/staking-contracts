@@ -22,4 +22,7 @@ pub enum ContractError {
 
     #[error(transparent)]
     DivideByZeroError(#[from] DivideByZeroError),
+
+    #[error("There are no rewards to claim")]
+    NoRewardsToClaim
 }
