@@ -1,0 +1,40 @@
+[package]
+name = "staking-rewards"
+version.workspace = true
+edition.workspace = true
+authors = ["symphony-dev-team"]
+
+exclude = [
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[package.metadata.scripts]
+optimize = """docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.5
+"""
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+cw-utils = { workspace = true }
+cw-ownable = { workspace = true }
+thiserror = { workspace = true }
+cosmwasm-schema = { workspace = true }
+cw2 = { workspace = true }
+symphony-interfaces = { workspace = true }
+staking-orchestrator = { path = "../../contracts/staking-orchestrator" }
+
+[dev-dependencies]
+cw-multi-test = { workspace = true }
+native-staking = { path = "../../contracts/native-staking" }
