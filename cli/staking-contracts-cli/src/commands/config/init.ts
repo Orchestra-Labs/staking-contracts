@@ -33,7 +33,6 @@ export default class Init extends Command {
       prefix: flags.prefix,
     }
     await fs.ensureFile(configPath);
-    this.log("here", chainConfig);
     await fs.writeJson(configPath, chainConfig, {spaces: 2, encoding: 'utf8'});
     this.log("Configuration saved to", configPath);
   }

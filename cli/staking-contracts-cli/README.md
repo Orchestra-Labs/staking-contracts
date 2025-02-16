@@ -32,9 +32,11 @@ USAGE
 * [`symphony-staking-cli base`](#symphony-staking-cli-base)
 * [`symphony-staking-cli config init MNEMONIC`](#symphony-staking-cli-config-init-mnemonic)
 * [`symphony-staking-cli config show`](#symphony-staking-cli-config-show)
-* [`symphony-staking-cli hello PERSON`](#symphony-staking-cli-hello-person)
-* [`symphony-staking-cli hello world`](#symphony-staking-cli-hello-world)
+* [`symphony-staking-cli contract info CODEID`](#symphony-staking-cli-contract-info-codeid)
+* [`symphony-staking-cli contract upload ARTIFACT`](#symphony-staking-cli-contract-upload-artifact)
 * [`symphony-staking-cli help [COMMAND]`](#symphony-staking-cli-help-command)
+* [`symphony-staking-cli orchestrator createStakingContract CONTRACTADDRESS`](#symphony-staking-cli-orchestrator-createstakingcontract-contractaddress)
+* [`symphony-staking-cli orchestrator init CODEID`](#symphony-staking-cli-orchestrator-init-codeid)
 * [`symphony-staking-cli plugins`](#symphony-staking-cli-plugins)
 * [`symphony-staking-cli plugins add PLUGIN`](#symphony-staking-cli-plugins-add-plugin)
 * [`symphony-staking-cli plugins:inspect PLUGIN...`](#symphony-staking-cli-pluginsinspect-plugin)
@@ -94,47 +96,42 @@ DESCRIPTION
 
 _See code: [src/commands/config/show.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/config/show.ts)_
 
-## `symphony-staking-cli hello PERSON`
+## `symphony-staking-cli contract info CODEID`
 
-Say hello
+Get information about a deployed contract
 
 ```
 USAGE
-  $ symphony-staking-cli hello PERSON -f <value>
+  $ symphony-staking-cli contract info CODEID
 
 ARGUMENTS
-  PERSON  Person to say hello to
-
-FLAGS
-  -f, --from=<value>  (required) Who is saying hello
+  CODEID  Code ID of the contract
 
 DESCRIPTION
-  Say hello
-
-EXAMPLES
-  $ symphony-staking-cli hello friend --from oclif
-  hello friend from oclif! (./src/commands/hello/index.ts)
+  Get information about a deployed contract
 ```
 
-_See code: [src/commands/hello/index.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/hello/index.ts)_
+_See code: [src/commands/contract/info.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/contract/info.ts)_
 
-## `symphony-staking-cli hello world`
+## `symphony-staking-cli contract upload ARTIFACT`
 
-Say hello world
+Upload a new Staking WASM artifact
 
 ```
 USAGE
-  $ symphony-staking-cli hello world
+  $ symphony-staking-cli contract upload ARTIFACT [--memo <value>]
+
+ARGUMENTS
+  ARTIFACT  Path to the artifact wasm file of the Staking contract
+
+FLAGS
+  --memo=<value>  Memo to include in the transaction
 
 DESCRIPTION
-  Say hello world
-
-EXAMPLES
-  $ symphony-staking-cli hello world
-  hello world! (./src/commands/hello/world.ts)
+  Upload a new Staking WASM artifact
 ```
 
-_See code: [src/commands/hello/world.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/hello/world.ts)_
+_See code: [src/commands/contract/upload.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/contract/upload.ts)_
 
 ## `symphony-staking-cli help [COMMAND]`
 
@@ -155,6 +152,51 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v6.2.25/src/commands/help.ts)_
+
+## `symphony-staking-cli orchestrator createStakingContract CONTRACTADDRESS`
+
+Create a new staking contract
+
+```
+USAGE
+  $ symphony-staking-cli orchestrator createStakingContract CONTRACTADDRESS -c <value> -d <value> -e <value> [-u
+  <value>]
+
+ARGUMENTS
+  CONTRACTADDRESS  Contract address of the orchestrator contract
+
+FLAGS
+  -c, --stakingContractCodeId=<value>  (required) Staking contract codeID
+  -d, --denom=<value>                  (required) Denom unit of the staking token
+  -e, --tokenExponent=<value>          (required) Exponent of the staking token
+  -u, --unbondingPeriod=<value>        Unbounding period in seconds
+
+DESCRIPTION
+  Create a new staking contract
+```
+
+_See code: [src/commands/orchestrator/createStakingContract.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/orchestrator/createStakingContract.ts)_
+
+## `symphony-staking-cli orchestrator init CODEID`
+
+Instantiate a new Staking contract
+
+```
+USAGE
+  $ symphony-staking-cli orchestrator init CODEID --label <value> [--memo <value>]
+
+ARGUMENTS
+  CODEID  Code ID of the contract
+
+FLAGS
+  --label=<value>  (required) Label for the contract
+  --memo=<value>   Memo to include in the transaction
+
+DESCRIPTION
+  Instantiate a new Staking contract
+```
+
+_See code: [src/commands/orchestrator/init.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/orchestrator/init.ts)_
 
 ## `symphony-staking-cli plugins`
 

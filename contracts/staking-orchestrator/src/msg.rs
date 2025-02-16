@@ -1,4 +1,4 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::DenomUnit;
 use cw_ownable::cw_ownable_execute;
 use cw_utils::Duration;
