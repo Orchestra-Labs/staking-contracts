@@ -184,16 +184,16 @@ fn stake_some_tokens(app: &mut App, user: &Addr, orchestrator_addr: &Addr, denom
     mint_native(app, user.as_str(), denom, amount);
 
 
-    let query = staking_orchestrator::msg::QueryMsg::StakingContractByDenom {
+    let query = symphony_interfaces::orchestrator::QueryMsg::StakingContractByDenom {
         denom: denom.to_string(),
     };
-    let response: staking_orchestrator::msg::StakingContractByDenomResponse = app.wrap().query_wasm_smart(
+    let response: symphony_interfaces::orchestrator::StakingContractByDenomResponse = app.wrap().query_wasm_smart(
         orchestrator_addr.clone(),
         &query,
     ).unwrap();
     let denom_staking_contract_addr = response.registered_contract.address;
 
-    let msg = native_staking::msg::ExecuteMsg::Stake {};
+    let msg = symphony_interfaces::staking::ExecuteMsg::Stake {};
 
     app.execute_contract(
         user.clone(),
