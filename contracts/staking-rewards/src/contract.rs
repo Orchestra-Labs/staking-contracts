@@ -7,8 +7,6 @@ use crate::msg::{AllUserStatesResponse, ConfigResponse, ExecuteMsg, InstantiateM
 use crate::state::{Config, PoolState, RewardsDistributionByToken, RewardsRecord, UserState, CONFIG, POOL_STATE, USER_STATE};
 use cosmwasm_std::{to_json_binary, Addr, Binary, BlockInfo, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128, Uint64};
 use cw2::set_contract_version;
-use staking_orchestrator::msg::ListStakersByDenomResponse;
-use staking_orchestrator::msg::QueryMsg::ListStakersByDenom;
 use symphony_interfaces::staking::StakerBalanceResponse;
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-staking-rewards";
@@ -230,12 +228,12 @@ fn query_staking_contract_by_denom(
     let limit = Some(STAKERS_LIMIT);
     let mut stakers_acc: Vec<StakerBalanceResponse> = vec![];
 
-    let query_request = &ListStakersByDenom {
+    let query_request = &symphony_interfaces::orchestrator::QueryMsg::ListStakersByDenom {
         denom: denom.to_string(),
         start_after,
         limit,
     };
-    let response: ListStakersByDenomResponse = deps.querier
+    let response: symphony_interfaces::orchestrator::ListStakersByDenomResponse = deps.querier
         .query_wasm_smart(orchestrator_addr.clone(), query_request)?;
     // add all response stakers to stakers_acc
     stakers_acc.extend(response.stakers);
@@ -249,12 +247,12 @@ fn query_staking_contract_by_denom(
             }),
             Some(last_staker) => {
                 start_after = Some(last_staker.address.clone());
-                let query_request = &ListStakersByDenom {
+                let query_request = &symphony_interfaces::orchestrator::QueryMsg::ListStakersByDenom {
                     denom: denom.to_string(),
                     start_after,
                     limit,
                 };
-                let response: ListStakersByDenomResponse = deps.querier
+                let response: symphony_interfaces::orchestrator::ListStakersByDenomResponse = deps.querier
                     .query_wasm_smart(orchestrator_addr.clone(), query_request)?;
                 if response.stakers.is_empty() {
                     return Ok(StakingBag {

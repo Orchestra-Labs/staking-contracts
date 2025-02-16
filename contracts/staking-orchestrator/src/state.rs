@@ -1,12 +1,6 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DenomUnit};
+use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
-
-#[cw_serde]
-pub struct RegisteredContract {
-    pub address: String,
-    pub token: DenomUnit,
-}
+use symphony_interfaces::orchestrator::RegisteredContract;
 
 pub const STAKING_CONTRACTS: Map<&String, RegisteredContract> = Map::new("staking_contracts");
 

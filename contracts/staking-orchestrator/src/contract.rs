@@ -3,12 +3,13 @@ use cosmwasm_std::entry_point;
 use std::collections::HashMap;
 
 use crate::error::ContractError;
-use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, ListStakersByDenomResponse, QueryMsg, StakingContractByDenomResponse};
-use crate::state::{RegisteredContract, STAKING_CONTRACTS};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::state::STAKING_CONTRACTS;
 use cosmwasm_std::{to_json_binary, Binary, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
 use cw2::set_contract_version;
 use cw_ownable::get_ownership;
 use cw_utils::{parse_instantiate_response_data, Duration};
+use symphony_interfaces::orchestrator::{AllTokensStakedBalanceAtHeightResponse, ListStakersByDenomResponse, QueryMsg, RegisteredContract, StakingContractByDenomResponse};
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-staking-orchestrator";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -135,7 +136,7 @@ pub fn query_all_tokens_staked_balance_at_height(
     for contract in contracts {
         let result: symphony_interfaces::staking::StakedBalanceAtHeightResponse = deps.querier.query_wasm_smart(
             contract.address.clone(),
-            &native_staking::msg::QueryMsg::StakedBalanceAtHeight {
+            &symphony_interfaces::staking::QueryMsg::StakedBalanceAtHeight {
                 address: address.clone(),
                 height,
             },
@@ -152,9 +153,9 @@ pub fn query_all_tokens_staked_balance_at_height(
 }
 
 fn query_staking_contract_config(deps: Deps, address: String) -> StdResult<RegisteredContract> {
-    let result: native_staking::msg::ConfigResponse = deps.querier.query_wasm_smart(
+    let result: symphony_interfaces::staking::ConfigResponse = deps.querier.query_wasm_smart(
         address.clone(),
-        &native_staking::msg::QueryMsg::Config {},
+        &symphony_interfaces::staking::QueryMsg::Config {},
     )?;
 
     let contract = RegisteredContract {
@@ -181,10 +182,10 @@ fn query_list_stakers_by_denom(deps: Deps, denom: String, start_after: Option<St
     }
 }
 
-fn query_staking_contract_for_list_stakers(deps: Deps, contract_addr: &str, start_after: Option<String>, limit: Option<u32>) -> StdResult<native_staking::msg::ListStakersResponse> {
+fn query_staking_contract_for_list_stakers(deps: Deps, contract_addr: &str, start_after: Option<String>, limit: Option<u32>) -> StdResult<symphony_interfaces::staking::ListStakersResponse> {
     let stakers = deps.querier.query_wasm_smart(
         contract_addr,
-        &native_staking::msg::QueryMsg::ListStakers {
+        &symphony_interfaces::staking::QueryMsg::ListStakers {
             start_after,
             limit,
         },

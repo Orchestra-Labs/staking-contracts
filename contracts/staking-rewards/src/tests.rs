@@ -1,7 +1,7 @@
-use crate::error::ContractError;
-use crate::msg::ExecuteMsg::{ClaimRewards, DistributeRewards};
-use crate::msg::{AllUserStatesResponse, ConfigResponse, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
-use crate::state::RewardsDistributionByToken;
+use super::error::ContractError;
+use super::msg::ExecuteMsg::{ClaimRewards, DistributeRewards};
+use super::msg::{AllUserStatesResponse, ConfigResponse, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
+use super::state::RewardsDistributionByToken;
 use cosmwasm_std::{coin, Addr, BlockInfo, DenomUnit, Empty, Uint128, Uint64};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
@@ -56,9 +56,9 @@ pub fn staking_orchestrator_contract() -> Box<dyn Contract<Empty>> {
 
 pub fn staking_rewards_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        crate::contract::execute,
-        crate::contract::instantiate,
-        crate::contract::query,
+        super::contract::execute,
+        super::contract::instantiate,
+        super::contract::query,
     );
     Box::new(contract)
 }
