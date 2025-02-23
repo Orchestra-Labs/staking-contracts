@@ -20,8 +20,8 @@ pub enum ExecuteMsg {
         reward_token: Option<DenomUnit>,
         rewards_distribution: Option<Vec<RewardsDistributionByToken>>,
     },
-    DistributeRewards,
-    ClaimRewards,
+    DistributeRewards {},
+    ClaimRewards {},
 }
 
 #[cw_ownable_query]

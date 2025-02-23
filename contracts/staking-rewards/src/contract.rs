@@ -84,8 +84,8 @@ pub fn execute(deps: DepsMut,
             reward_token,
             rewards_distribution,
         } => execute_update_config(deps, info, staking_orchestrator_addr, reward_token, rewards_distribution),
-        ExecuteMsg::DistributeRewards => execute_distribute_rewards(deps, env, info),
-        ExecuteMsg::ClaimRewards => execute_claim_rewards(deps, env, info),
+        ExecuteMsg::DistributeRewards {} => execute_distribute_rewards(deps, env, info),
+        ExecuteMsg::ClaimRewards {} => execute_claim_rewards(deps, env, info),
     }
 }
 
@@ -334,6 +334,7 @@ fn execute_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
 //     Ok(balance)
 // }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Ownership {} => to_json_binary(&cw_ownable::get_ownership(deps.storage)?),

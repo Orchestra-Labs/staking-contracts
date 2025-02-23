@@ -44,10 +44,12 @@ export default class CreateStakingContract extends Base {
 
     const executeResult = await client.execute(signerAddress, args.contractAddress, executeMsg, "auto", `Symphony Native Staking Contract ${flags.denom}`, []);
     this.log("Transaction Hash: ", executeResult.transactionHash);
-    const query: QueryStakingContractByDenom = {
-      denom: flags.denom,
+    const queryMsg = {
+      "staking_contract_by_denom": {
+        denom: flags.denom,
+      } as QueryStakingContractByDenom
     }
-    const stakingContractResult: StakingContractByDenomResponse = await client.queryContractSmart(args.contractAddress, query);
+    const stakingContractResult: StakingContractByDenomResponse = await client.queryContractSmart(args.contractAddress, queryMsg);
     this.log("Staking Contract Instantiated with address: ", stakingContractResult.registered_contract.address);
   }
 

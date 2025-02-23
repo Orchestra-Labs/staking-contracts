@@ -36,6 +36,7 @@ USAGE
 * [`symphony-staking-cli contract upload ARTIFACT`](#symphony-staking-cli-contract-upload-artifact)
 * [`symphony-staking-cli help [COMMAND]`](#symphony-staking-cli-help-command)
 * [`symphony-staking-cli orchestrator createStakingContract CONTRACTADDRESS`](#symphony-staking-cli-orchestrator-createstakingcontract-contractaddress)
+* [`symphony-staking-cli orchestrator getStakingContract CONTRACTADDRESS`](#symphony-staking-cli-orchestrator-getstakingcontract-contractaddress)
 * [`symphony-staking-cli orchestrator init CODEID`](#symphony-staking-cli-orchestrator-init-codeid)
 * [`symphony-staking-cli plugins`](#symphony-staking-cli-plugins)
 * [`symphony-staking-cli plugins add PLUGIN`](#symphony-staking-cli-plugins-add-plugin)
@@ -47,6 +48,11 @@ USAGE
 * [`symphony-staking-cli plugins uninstall [PLUGIN]`](#symphony-staking-cli-plugins-uninstall-plugin)
 * [`symphony-staking-cli plugins unlink [PLUGIN]`](#symphony-staking-cli-plugins-unlink-plugin)
 * [`symphony-staking-cli plugins update`](#symphony-staking-cli-plugins-update)
+* [`symphony-staking-cli rewards distribute CONTRACTADDRESS`](#symphony-staking-cli-rewards-distribute-contractaddress)
+* [`symphony-staking-cli rewards init CODEID`](#symphony-staking-cli-rewards-init-codeid)
+* [`symphony-staking-cli rewards userStates CONTRACTADDRESS`](#symphony-staking-cli-rewards-userstates-contractaddress)
+* [`symphony-staking-cli staking stake CONTRACTADDRESS`](#symphony-staking-cli-staking-stake-contractaddress)
+* [`symphony-staking-cli swap`](#symphony-staking-cli-swap)
 
 ## `symphony-staking-cli base`
 
@@ -176,6 +182,26 @@ DESCRIPTION
 ```
 
 _See code: [src/commands/orchestrator/createStakingContract.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/orchestrator/createStakingContract.ts)_
+
+## `symphony-staking-cli orchestrator getStakingContract CONTRACTADDRESS`
+
+Get a staking contract by denom
+
+```
+USAGE
+  $ symphony-staking-cli orchestrator getStakingContract CONTRACTADDRESS -d <value>
+
+ARGUMENTS
+  CONTRACTADDRESS  Contract address of the orchestrator contract
+
+FLAGS
+  -d, --denom=<value>  (required) Denom unit of the staking token
+
+DESCRIPTION
+  Get a staking contract by denom
+```
+
+_See code: [src/commands/orchestrator/getStakingContract.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/orchestrator/getStakingContract.ts)_
 
 ## `symphony-staking-cli orchestrator init CODEID`
 
@@ -487,4 +513,109 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v5.4.32/src/commands/plugins/update.ts)_
+
+## `symphony-staking-cli rewards distribute CONTRACTADDRESS`
+
+Distribute rewards to stakers
+
+```
+USAGE
+  $ symphony-staking-cli rewards distribute CONTRACTADDRESS -a <value> [-d <value>] [-e <value>]
+
+ARGUMENTS
+  CONTRACTADDRESS  Address of the rewards contract
+
+FLAGS
+  -a, --amount=<value>           (required) Amount of tokens to stake
+  -d, --rewardsDenom=<value>     [default: note] Denom unit of the rewards token
+  -e, --rewardsExponent=<value>  [default: 6] Exponent of the rewards token
+
+DESCRIPTION
+  Distribute rewards to stakers
+```
+
+_See code: [src/commands/rewards/distribute.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/rewards/distribute.ts)_
+
+## `symphony-staking-cli rewards init CODEID`
+
+Initialize rewards for staking contract
+
+```
+USAGE
+  $ symphony-staking-cli rewards init CODEID --label <value> -o <value> -p <value> [--memo <value>] [-d <value>]
+    [-e <value>]
+
+ARGUMENTS
+  CODEID  Code ID of the contract
+
+FLAGS
+  -d, --rewardsDenom=<value>      [default: note] Denom unit of the rewards token
+  -e, --rewardsExponent=<value>   [default: 6] Exponent of the rewards token
+  -o, --orchestratorAddr=<value>  (required) Orchestrator address
+  -p, --distributionPath=<value>  (required) Path to the rewards distribution file
+      --label=<value>             (required) Label for the contract
+      --memo=<value>              Memo to include in the transaction
+
+DESCRIPTION
+  Initialize rewards for staking contract
+```
+
+_See code: [src/commands/rewards/init.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/rewards/init.ts)_
+
+## `symphony-staking-cli rewards userStates CONTRACTADDRESS`
+
+Get the rewards states of all users
+
+```
+USAGE
+  $ symphony-staking-cli rewards userStates CONTRACTADDRESS
+
+ARGUMENTS
+  CONTRACTADDRESS  Address of the rewards contract
+
+DESCRIPTION
+  Get the rewards states of all users
+```
+
+_See code: [src/commands/rewards/userStates.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/rewards/userStates.ts)_
+
+## `symphony-staking-cli staking stake CONTRACTADDRESS`
+
+Stake tokens to a staking contract
+
+```
+USAGE
+  $ symphony-staking-cli staking stake CONTRACTADDRESS -a <value> -d <value>
+
+ARGUMENTS
+  CONTRACTADDRESS  Contract address of the staking contract
+
+FLAGS
+  -a, --amount=<value>  (required) Amount of tokens to stake
+  -d, --denom=<value>   (required) Denom unit of the staking token
+
+DESCRIPTION
+  Stake tokens to a staking contract
+```
+
+_See code: [src/commands/staking/stake.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/staking/stake.ts)_
+
+## `symphony-staking-cli swap`
+
+Swap tokens
+
+```
+USAGE
+  $ symphony-staking-cli swap -a <value> -s <value> -t <value>
+
+FLAGS
+  -a, --amount=<value>       (required) Amount of tokens to swap
+  -s, --sourceDenom=<value>  (required) Denom unit of the source token
+  -t, --targetDenom=<value>  (required) Denom unit of the target token
+
+DESCRIPTION
+  Swap tokens
+```
+
+_See code: [src/commands/swap.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/swap.ts)_
 <!-- commandsstop -->
