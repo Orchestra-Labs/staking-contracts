@@ -3,9 +3,9 @@ use cosmwasm_std::entry_point;
 use std::collections::HashMap;
 
 use crate::error::ContractError;
-use crate::msg::{AllUserStatesResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
-use crate::state::{Config, PoolState, RewardsDistributionByToken, RewardsRecord, UserState, CONFIG, POOL_STATE, USER_STATE};
-use cosmwasm_std::{to_json_binary, Addr, Binary, BlockInfo, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Uint128, Uint64};
+use crate::msg::{AllUserStatesResponse, ConfigResponse, ExecuteMsg, InstantiateMsg, IsPausedResponse, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
+use crate::state::{Config, PoolState, RewardsDistributionByToken, RewardsRecord, UserState, CONFIG, PAUSED, POOL_STATE, USER_STATE};
+use cosmwasm_std::{to_json_binary, Addr, Binary, BlockInfo, DenomUnit, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint64};
 use cw2::set_contract_version;
 use symphony_interfaces::staking::StakerBalanceResponse;
 
@@ -13,6 +13,14 @@ pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-staking-rewards";
 pub(crate) const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const WEIGHT_TOTAL: u64 = 100_000;
+
+fn assert_not_paused(storage: &dyn Storage) -> Result<(), ContractError> {
+    let paused = PAUSED.load(storage)?;
+    if paused {
+        return Err(ContractError::ContractPaused {});
+    }
+    Ok(())
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -44,6 +52,8 @@ pub fn instantiate(
     for pool_state in pool_states {
         POOL_STATE.save(deps.storage, &pool_state.denom.denom, &pool_state, env.block.height)?;
     }
+
+    PAUSED.save(deps.storage, &false)?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
@@ -86,6 +96,8 @@ pub fn execute(deps: DepsMut,
         } => execute_update_config(deps, info, staking_orchestrator_addr, reward_token, rewards_distribution),
         ExecuteMsg::DistributeRewards {} => execute_distribute_rewards(deps, env, info),
         ExecuteMsg::ClaimRewards {} => execute_claim_rewards(deps, env, info),
+        ExecuteMsg::Pause {} => execute_pause(deps, info),
+        ExecuteMsg::Unpause {} => execute_unpause(deps, info),
     }
 }
 
@@ -135,6 +147,7 @@ fn execute_distribute_rewards(
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
+    assert_not_paused(deps.storage)?;
     let config = crate::state::CONFIG.load(deps.storage)?;
 
     let total_rewards_to_distribute = info.funds.iter().find(|coin| coin.denom == config.reward_token.denom)
@@ -270,6 +283,7 @@ fn query_staking_contract_by_denom(
 }
 
 fn execute_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    assert_not_paused(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
 
     let user_state = USER_STATE.load(deps.storage, &info.sender)?;
@@ -321,6 +335,26 @@ fn execute_claim_rewards(deps: DepsMut, env: Env, info: MessageInfo) -> Result<R
     )
 }
 
+fn execute_pause(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    PAUSED.save(deps.storage, &true)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "pause")
+    )
+}
+
+fn execute_unpause(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    PAUSED.save(deps.storage, &false)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "unpause")
+    )
+}
+
 // fn query_contract_bank_balance(deps: &DepsMut, denom: &str, contract_addr: &str) -> Result<Uint128, ContractError> {
 //     let balance_request = QueryRequest::Bank(BankQuery::Balance {
 //         address: contract_addr.to_string(),
@@ -343,6 +377,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PoolState { denom, block_height } => to_json_binary(&query_pool_state(deps, denom, block_height)?),
         QueryMsg::AllUserStates {} => to_json_binary(&query_all_user_states(deps)?),
         QueryMsg::UserState { address, block_height } => to_json_binary(&query_user_state(deps, address, block_height)?),
+        QueryMsg::IsPaused {} => to_json_binary(&query_is_paused(deps)?),
     }
 }
 
@@ -432,4 +467,9 @@ fn query_user_state(deps: Deps, address: String, block_height: Option<Uint64>) -
             rewards_data: user_state.rewards_data,
         })
     }
+}
+
+fn query_is_paused(deps: Deps) -> StdResult<IsPausedResponse> {
+    let paused = PAUSED.load(deps.storage)?;
+    Ok(IsPausedResponse { paused })
 }
