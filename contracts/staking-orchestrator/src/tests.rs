@@ -1,6 +1,7 @@
-use crate::msg::{AllTokensStakedBalanceAtHeightResponse, ExecuteMsg, InstantiateMsg, ListStakersByDenomResponse, QueryMsg, StakingContractByDenomResponse};
+use super::msg::{ExecuteMsg, InstantiateMsg};
 use cosmwasm_std::{coin, Addr, BlockInfo, Coin, DenomUnit, Empty, StdResult, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+use symphony_interfaces::orchestrator::{AllTokensStakedBalanceAtHeightResponse, ListStakersByDenomResponse, QueryMsg, StakingContractByDenomResponse};
 
 const OWNER: &str = "owner";
 const TIME_BETWEEN_BLOCKS: u64 = 5;
@@ -38,9 +39,9 @@ pub fn native_staking_contract() -> Box<dyn Contract<Empty>>{
 
 pub fn staking_orchestrator_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-      crate::contract::execute,
-      crate::contract::instantiate,
-      crate::contract::query,
+        super::contract::execute,
+        super::contract::instantiate,
+        super::contract::query,
     ).with_reply(crate::contract::reply);
     Box::new(contract)
 }
@@ -60,7 +61,7 @@ fn instantiate_orchestrator(app: &mut App, owner: Option<String>) -> Addr {
 }
 
 fn stake_tokens(app: &mut App, amount: Uint128, denom: &str, staking_contract: Addr) {
-    let msg = native_staking::msg::ExecuteMsg::Stake {};
+    let msg = symphony_interfaces::staking::ExecuteMsg::Stake {};
 
     app.execute_contract(
         app.api().addr_make(OWNER),
@@ -115,7 +116,7 @@ pub fn execute_create_staking_contract() {
         &[],
     ).unwrap();
 
-    let contract_data: StakingContractByDenomResponse = app.wrap().query_wasm_smart(
+    let contract_data: symphony_interfaces::orchestrator::StakingContractByDenomResponse = app.wrap().query_wasm_smart(
         orchestrator_contract.clone(),
         &QueryMsg::StakingContractByDenom {
             denom: denom_unit.to_string(),

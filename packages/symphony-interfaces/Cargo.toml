@@ -7,3 +7,5 @@ edition.workspace = true
 cosmwasm-schema = { workspace = true }
 cw-utils = { workspace = true }
 cosmwasm-std = { workspace = true }
+cw-ownable = { workspace = true }
+cw-controllers = { version = "2.0.0" }

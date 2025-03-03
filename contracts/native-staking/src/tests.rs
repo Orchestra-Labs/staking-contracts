@@ -1,12 +1,11 @@
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, ListStakersResponse, QueryMsg, TotalStakedAtHeightResponse};
 use crate::state::Config;
 use cosmwasm_std::{coin, Addr, BlockInfo, Coin, DenomUnit, Empty, Uint128};
 use cw_controllers::ClaimsResponse;
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use cw_ownable::{Action, Ownership};
 use cw_utils::{Duration, Expiration};
-use symphony_interfaces::staking::{InstantiateMsg, StakedBalanceAtHeightResponse};
+use symphony_interfaces::staking::{ExecuteMsg, InstantiateMsg, ListStakersResponse, QueryMsg, StakedBalanceAtHeightResponse, TotalStakedAtHeightResponse};
 
 const OWNER: &str = "owner";
 const TIME_BETWEEN_BLOCKS: u64 = 5;

@@ -24,5 +24,9 @@ pub enum ContractError {
     DivideByZeroError(#[from] DivideByZeroError),
 
     #[error("There are no rewards to claim")]
-    NoRewardsToClaim
+    NoRewardsToClaim,
+
+    #[error("Cannot execute this action while the contract is paused")]
+    ContractPaused,
+
 }

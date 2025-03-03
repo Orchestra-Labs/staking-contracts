@@ -36,6 +36,7 @@ pub struct UserState {
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
+pub const PAUSED: Item<bool> = Item::new("paused");
 pub const POOL_STATE: SnapshotMap<&str, PoolState> = SnapshotMap::new(
     "pool_state",
     "pool_state__checkpoints",

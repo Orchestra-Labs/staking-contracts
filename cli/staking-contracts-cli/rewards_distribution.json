@@ -1,0 +1,10 @@
+[
+  {
+    "denom": {
+      "denom": "usdr",
+      "exponent": 6,
+      "aliases": []
+    },
+    "weight": "100000"
+  }
+]

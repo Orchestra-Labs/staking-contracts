@@ -20,8 +20,10 @@ pub enum ExecuteMsg {
         reward_token: Option<DenomUnit>,
         rewards_distribution: Option<Vec<RewardsDistributionByToken>>,
     },
-    DistributeRewards,
-    ClaimRewards,
+    DistributeRewards {},
+    ClaimRewards {},
+    Pause {},
+    Unpause {},
 }
 
 #[cw_ownable_query]
@@ -38,6 +40,8 @@ pub enum QueryMsg {
     PoolState { denom: String, block_height: Option<Uint64> },
     #[returns(UserStateResponse)]
     UserState { address: String, block_height: Option<Uint64> },
+    #[returns(IsPausedResponse)]
+    IsPaused {},
 }
 
 #[cw_serde]
@@ -75,4 +79,9 @@ pub struct UserStateResponse {
     pub address: String,
     pub reward_debt: Uint128,
     pub rewards_data: HashMap<String, RewardsRecord>,
+}
+
+#[cw_serde]
+pub struct IsPausedResponse {
+    pub paused: bool,
 }

@@ -1,7 +1,7 @@
-use crate::error::ContractError;
-use crate::msg::ExecuteMsg::{ClaimRewards, DistributeRewards};
-use crate::msg::{AllUserStatesResponse, ConfigResponse, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
-use crate::state::RewardsDistributionByToken;
+use super::error::ContractError;
+use super::msg::ExecuteMsg::{ClaimRewards, DistributeRewards};
+use super::msg::{AllUserStatesResponse, ConfigResponse, InstantiateMsg, ListPoolStatesResponse, PoolStateResponse, QueryMsg, UserStateResponse};
+use super::state::RewardsDistributionByToken;
 use cosmwasm_std::{coin, Addr, BlockInfo, DenomUnit, Empty, Uint128, Uint64};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
@@ -56,9 +56,9 @@ pub fn staking_orchestrator_contract() -> Box<dyn Contract<Empty>> {
 
 pub fn staking_rewards_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        crate::contract::execute,
-        crate::contract::instantiate,
-        crate::contract::query,
+        super::contract::execute,
+        super::contract::instantiate,
+        super::contract::query,
     );
     Box::new(contract)
 }
@@ -184,16 +184,16 @@ fn stake_some_tokens(app: &mut App, user: &Addr, orchestrator_addr: &Addr, denom
     mint_native(app, user.as_str(), denom, amount);
 
 
-    let query = staking_orchestrator::msg::QueryMsg::StakingContractByDenom {
+    let query = symphony_interfaces::orchestrator::QueryMsg::StakingContractByDenom {
         denom: denom.to_string(),
     };
-    let response: staking_orchestrator::msg::StakingContractByDenomResponse = app.wrap().query_wasm_smart(
+    let response: symphony_interfaces::orchestrator::StakingContractByDenomResponse = app.wrap().query_wasm_smart(
         orchestrator_addr.clone(),
         &query,
     ).unwrap();
     let denom_staking_contract_addr = response.registered_contract.address;
 
-    let msg = native_staking::msg::ExecuteMsg::Stake {};
+    let msg = symphony_interfaces::staking::ExecuteMsg::Stake {};
 
     app.execute_contract(
         user.clone(),
@@ -320,4 +320,128 @@ pub fn distribute_rewards() {
     ).unwrap();
 
     assert_eq!(pool_state.total_rewards, Uint128::zero());
+}
+
+#[test]
+pub fn paused_contract_should_not_distribute_rewards() {
+    let mut app = mock_app();
+    let owner_address = app.api().addr_make(OWNER);
+    mint_native(&mut app, &owner_address.to_string(), "urev", 1_000_000_000);
+    let orchestrator_contract = app.api().addr_make("orchestrator");
+    let reward_denom = DenomUnit {
+        denom: "urev".to_string(),
+        exponent: 6,
+        aliases: vec![],
+    };
+    let rewards_distribution = vec![
+        RewardsDistributionByToken {
+            denom: DenomUnit {
+                denom: "ustake".to_string(),
+                exponent: 6,
+                aliases: vec![],
+            },
+            weight: Uint64::from(50_000u64),
+        },
+        RewardsDistributionByToken {
+            denom: DenomUnit {
+                denom: "ustable".to_string(),
+                exponent: 6,
+                aliases: vec![],
+            },
+            weight: Uint64::from(50_000u64),
+        }
+    ];
+
+    let rewards_contract = instantiate_rewards(
+        &mut app,
+        Some(owner_address.clone().into()),
+        &orchestrator_contract,
+        &reward_denom,
+        &rewards_distribution,
+    );
+
+    let _ = app.contract_data(&rewards_contract).unwrap();
+
+    // pause the contract
+    let msg = super::msg::ExecuteMsg::Pause {};
+    app.execute_contract(
+        owner_address.clone(),
+        rewards_contract.clone(),
+        &msg,
+        &[],
+    ).unwrap();
+
+    mint_native(&mut app, owner_address.as_str(), REWARD_DENOM, 1_000_000);
+
+    let msg = DistributeRewards {};
+    let err = app.execute_contract(
+        owner_address.clone(),
+        rewards_contract.clone(),
+        &msg,
+        &[coin(1_000_000, REWARD_DENOM)],
+    ).unwrap_err();
+
+    assert_eq!(err.root_cause().to_string(), ContractError::ContractPaused {}.to_string());
+}
+
+#[test]
+pub fn paused_contract_should_not_claim_rewards() {
+    let mut app = mock_app();
+    let owner_address = app.api().addr_make(OWNER);
+    mint_native(&mut app, &owner_address.to_string(), "urev", 1_000_000_000);
+    let orchestrator_contract = app.api().addr_make("orchestrator");
+    let reward_denom = DenomUnit {
+        denom: "urev".to_string(),
+        exponent: 6,
+        aliases: vec![],
+    };
+    let rewards_distribution = vec![
+        RewardsDistributionByToken {
+            denom: DenomUnit {
+                denom: "ustake".to_string(),
+                exponent: 6,
+                aliases: vec![],
+            },
+            weight: Uint64::from(50_000u64),
+        },
+        RewardsDistributionByToken {
+            denom: DenomUnit {
+                denom: "ustable".to_string(),
+                exponent: 6,
+                aliases: vec![],
+            },
+            weight: Uint64::from(50_000u64),
+        }
+    ];
+
+    let rewards_contract = instantiate_rewards(
+        &mut app,
+        Some(owner_address.clone().into()),
+        &orchestrator_contract,
+        &reward_denom,
+        &rewards_distribution,
+    );
+
+    let _ = app.contract_data(&rewards_contract).unwrap();
+
+    // pause the contract
+    let msg = super::msg::ExecuteMsg::Pause {};
+    app.execute_contract(
+        owner_address.clone(),
+        rewards_contract.clone(),
+        &msg,
+        &[],
+    ).unwrap();
+
+    mint_native(&mut app, owner_address.as_str(), REWARD_DENOM, 1_000_000);
+
+    let msg = ClaimRewards {};
+    let err = app.execute_contract(
+        owner_address.clone(),
+        rewards_contract.clone(),
+        &msg,
+        &[],
+    ).unwrap_err();
+
+    assert_eq!(err.root_cause().to_string(), ContractError::ContractPaused {}.to_string());
 }
