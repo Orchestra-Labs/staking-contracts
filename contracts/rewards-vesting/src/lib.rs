@@ -1,5 +1,5 @@
 pub mod state;
-mod msg;
-mod contract;
-mod error;
+pub mod msg;
+pub mod contract;
+pub mod error;
 mod vesting;

@@ -1,5 +1,5 @@
 use crate::vesting::Schedule;
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Timestamp, Uint128};
 use cw_ownable::cw_ownable_execute;
 
@@ -9,7 +9,13 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub enum QueryMsg {}
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    #[returns(VestingContractResponse)]
+    VestingContract {
+        address: String,
+    },
+}
 
 #[cw_ownable_execute]
 #[cw_serde]
@@ -38,4 +44,11 @@ pub struct VestingConfiguration {
 pub struct VestingRecord {
     pub address: String,
     pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct VestingContractResponse {
+    pub found: bool,
+    pub address: String,
+    pub contract_address: Option<String>
 }

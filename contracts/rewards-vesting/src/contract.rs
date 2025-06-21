@@ -2,10 +2,10 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, VestingConfiguration, VestingRecord};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, VestingConfiguration, VestingContractResponse, VestingRecord};
 use crate::state::VESTING_CONTRACTS;
-use crate::vesting::{query_vesting_contract_for_info, VestingExecuteMsg, VestingInstantiateMsg};
-use cosmwasm_std::{to_json_binary, Binary, Coin, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
+use crate::vesting::{query_vesting_contract_for_info, UncheckedDenom, VestingExecuteMsg, VestingInstantiateMsg};
+use cosmwasm_std::{to_json_binary, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
 use cw2::set_contract_version;
 use cw_utils::parse_instantiate_response_data;
 
@@ -84,7 +84,7 @@ fn execute_batch_vesting(
         .add_submessages(sub_msgs))
 }
 
-fn instantiate_cw_vesting_contract(env: Env, info: MessageInfo, config: VestingConfiguration, record: &VestingRecord) -> StdResult<SubMsg> {
+fn instantiate_cw_vesting_contract(env: Env, _info: MessageInfo, config: VestingConfiguration, record: &VestingRecord) -> StdResult<SubMsg> {
     let owner = env.contract.address.into_string();
     let funds = vec![Coin {
         denom: config.denom.clone(),
@@ -96,7 +96,7 @@ fn instantiate_cw_vesting_contract(env: Env, info: MessageInfo, config: VestingC
         title: format!("{} {}", config.title_prefix, record.address),
         description: Some(format!("{} {}", config.description_prefix, record.address)),
         total: record.amount,
-        denom: config.denom.clone(),
+        denom: UncheckedDenom::Native(config.denom.clone()),
         schedule: config.schedule,
         start_time: config.start_time,
         vesting_duration_seconds: config.duration,
@@ -107,7 +107,7 @@ fn instantiate_cw_vesting_contract(env: Env, info: MessageInfo, config: VestingC
         admin: Some(owner.clone()),
         code_id: config.contract_code_id,
         msg: to_json_binary(&msg.clone())?,
-        funds: info.funds,
+        funds,
         label: format!("{} rewards vesting contract for user: {}", config.denom, record.address.clone()),
     };
 
@@ -116,7 +116,7 @@ fn instantiate_cw_vesting_contract(env: Env, info: MessageInfo, config: VestingC
 
 fn execute_batch_cancel(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     addresses: Vec<String>,
 ) -> Result<Response, ContractError> {
@@ -150,6 +150,26 @@ fn execute_batch_cancel(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::VestingContract { address } =>to_json_binary(&query_vesting_contract(deps, address)?),
+    }
+}
+
+fn query_vesting_contract(
+    deps: Deps,
+    address: String,
+) -> StdResult<VestingContractResponse> {
+    let vesting_contract = VESTING_CONTRACTS.may_load(deps.storage, address.clone())?;
+
+    Ok(VestingContractResponse {
+        found: vesting_contract.is_some(),
+        address: address.clone(),
+        contract_address: vesting_contract,
+    })
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
     match msg.id {
         INSTANTIATE_VESTING_REPLY_ID => {
@@ -162,7 +182,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
 fn decode_and_handle_binary_data(deps: DepsMut, bin: &Binary) -> StdResult<Response> {
     let decoded = parse_instantiate_response_data(&bin)
         .map_err(|e| StdError::generic_err(format!("parsing submsg response: {}", e)))?;
-
+    
     let contract_info = query_vesting_contract_for_info(
         deps.as_ref(),
         decoded.contract_address.clone()
@@ -175,7 +195,7 @@ fn decode_and_handle_binary_data(deps: DepsMut, bin: &Binary) -> StdResult<Respo
     Ok(
         Response::new()
             .add_attribute("action", "create_vesting_contract")
-            .add_attribute("denom", contract_info.denom)
+            .add_attribute("denom", contract_info.denom.to_string())
             .add_attribute("recipient", contract_info.recipient.into_string())
             .add_attribute("title", contract_info.title)
             .add_attribute("description", contract_info.description.unwrap_or_default())
