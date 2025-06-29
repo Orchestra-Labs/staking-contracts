@@ -15,6 +15,11 @@ pub enum QueryMsg {
     VestingContract {
         address: String,
     },
+    #[returns(GetAllVestingContractsResponse)]
+    AllVestingContracts {
+        start_after: Option<String>,
+        limit: Option<u64>,
+    }
 }
 
 #[cw_ownable_execute]
@@ -51,4 +56,15 @@ pub struct VestingContractResponse {
     pub found: bool,
     pub address: String,
     pub contract_address: Option<String>
+}
+
+#[cw_serde]
+pub struct VestingContractRecord {
+    pub address: String,
+    pub contract_address: String,
+}
+
+#[cw_serde]
+pub struct GetAllVestingContractsResponse {
+    pub contracts: Vec<VestingContractRecord>,
 }

@@ -2,11 +2,12 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, VestingConfiguration, VestingContractResponse, VestingRecord};
+use crate::msg::{ExecuteMsg, GetAllVestingContractsResponse, InstantiateMsg, QueryMsg, VestingConfiguration, VestingContractRecord, VestingContractResponse, VestingRecord};
 use crate::state::VESTING_CONTRACTS;
 use crate::vesting::{query_vesting_contract_for_info, UncheckedDenom, VestingExecuteMsg, VestingInstantiateMsg};
 use cosmwasm_std::{to_json_binary, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, WasmMsg};
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use cw_utils::parse_instantiate_response_data;
 
 pub(crate) const CONTRACT_NAME: &str = "crates.io:symphony-rewards-vesting";
@@ -153,6 +154,8 @@ fn execute_batch_cancel(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::VestingContract { address } =>to_json_binary(&query_vesting_contract(deps, address)?),
+        QueryMsg::AllVestingContracts {start_after, limit} => 
+            to_json_binary(&query_all_vesting_contracts(deps, start_after, limit)?)
     }
 }
 
@@ -166,6 +169,29 @@ fn query_vesting_contract(
         found: vesting_contract.is_some(),
         address: address.clone(),
         contract_address: vesting_contract,
+    })
+}
+
+fn query_all_vesting_contracts(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u64>,
+) -> StdResult<GetAllVestingContractsResponse> {
+    let min = start_after.map(Bound::exclusive);
+    let contracts = VESTING_CONTRACTS
+        .range(deps.storage, min, None, cosmwasm_std::Order::Ascending)
+        .take(limit.unwrap_or(50) as usize)
+        .map(|item| {
+            let (address, contract_address) = item?;
+            Ok(VestingContractRecord {
+                address,
+                contract_address,
+            })
+        })
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(GetAllVestingContractsResponse {
+        contracts
     })
 }
 
