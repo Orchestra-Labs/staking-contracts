@@ -154,7 +154,7 @@ fn execute_batch_cancel(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::VestingContract { address } =>to_json_binary(&query_vesting_contract(deps, address)?),
-        QueryMsg::AllVestingContracts {start_after, limit} => 
+        QueryMsg::GetAllVestingContracts {start_after, limit} => 
             to_json_binary(&query_all_vesting_contracts(deps, start_after, limit)?)
     }
 }

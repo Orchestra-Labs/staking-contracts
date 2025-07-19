@@ -16,7 +16,7 @@ pub enum QueryMsg {
         address: String,
     },
     #[returns(GetAllVestingContractsResponse)]
-    AllVestingContracts {
+    GetAllVestingContracts {
         start_after: Option<String>,
         limit: Option<u64>,
     }
