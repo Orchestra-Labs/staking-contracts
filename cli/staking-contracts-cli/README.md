@@ -20,7 +20,7 @@ $ npm install -g staking-contracts-cli
 $ symphony-staking-cli COMMAND
 running command...
 $ symphony-staking-cli (--version)
-staking-contracts-cli/0.0.0 darwin-arm64 node-v22.11.0
+staking-contracts-cli/0.0.0 darwin-arm64 node-v18.18.2
 $ symphony-staking-cli --help [COMMAND]
 USAGE
   $ symphony-staking-cli COMMAND
@@ -53,6 +53,9 @@ USAGE
 * [`symphony-staking-cli rewards userStates CONTRACTADDRESS`](#symphony-staking-cli-rewards-userstates-contractaddress)
 * [`symphony-staking-cli staking stake CONTRACTADDRESS`](#symphony-staking-cli-staking-stake-contractaddress)
 * [`symphony-staking-cli swap`](#symphony-staking-cli-swap)
+* [`symphony-staking-cli vesting getVestingContract CONTRACTADDRESS`](#symphony-staking-cli-vesting-getvestingcontract-contractaddress)
+* [`symphony-staking-cli vesting init CODEID`](#symphony-staking-cli-vesting-init-codeid)
+* [`symphony-staking-cli vesting setupVesting CONTRACTADDRESS`](#symphony-staking-cli-vesting-setupvesting-contractaddress)
 
 ## `symphony-staking-cli base`
 
@@ -618,4 +621,65 @@ DESCRIPTION
 ```
 
 _See code: [src/commands/swap.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/swap.ts)_
+
+## `symphony-staking-cli vesting getVestingContract CONTRACTADDRESS`
+
+Setup rewards vesting
+
+```
+USAGE
+  $ symphony-staking-cli vesting getVestingContract CONTRACTADDRESS -p <value>
+
+ARGUMENTS
+  CONTRACTADDRESS  Address of the rewards contract
+
+FLAGS
+  -p, --recipient=<value>  (required) Recipient Address
+
+DESCRIPTION
+  Setup rewards vesting
+```
+
+_See code: [src/commands/vesting/getVestingContract.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/vesting/getVestingContract.ts)_
+
+## `symphony-staking-cli vesting init CODEID`
+
+Initialize vesting contract for rewards distribution
+
+```
+USAGE
+  $ symphony-staking-cli vesting init CODEID --label <value> [--memo <value>]
+
+ARGUMENTS
+  CODEID  Code ID of the contract
+
+FLAGS
+  --label=<value>  (required) Label for the contract
+  --memo=<value>   Memo to include in the transaction
+
+DESCRIPTION
+  Initialize vesting contract for rewards distribution
+```
+
+_See code: [src/commands/vesting/init.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/vesting/init.ts)_
+
+## `symphony-staking-cli vesting setupVesting CONTRACTADDRESS`
+
+Setup rewards vesting
+
+```
+USAGE
+  $ symphony-staking-cli vesting setupVesting CONTRACTADDRESS -p <value>
+
+ARGUMENTS
+  CONTRACTADDRESS  Address of the rewards contract
+
+FLAGS
+  -p, --vestingPath=<value>  (required) Path to the vesting file
+
+DESCRIPTION
+  Setup rewards vesting
+```
+
+_See code: [src/commands/vesting/setupVesting.ts](https://github.com/Orchestra-Labs/staking-contracts/blob/v0.0.0/src/commands/vesting/setupVesting.ts)_
 <!-- commandsstop -->

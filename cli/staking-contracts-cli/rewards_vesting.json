@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "contract_code_id": 8,
+    "denom": "note",
+    "description_prefix": "test",
+    "duration": 864000,
+    "schedule": "saturating_linear",
+    "start_time": "2025-06-21T09:00:00.000Z",
+    "title_prefix": "test"
+  },
+  "records": [
+    {
+      "address": "<address>",
+      "amount": "1000000"
+    }
+  ]
+}
