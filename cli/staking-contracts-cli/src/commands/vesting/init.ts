@@ -11,6 +11,7 @@ export default class Initialize extends Base {
   }
 
   static flags = {
+    owner: Flags.string({char: 'o', description: "Owner address of the contract", required: false}),
     label: Flags.string({description: "Label for the contract", required: true}),
     memo: Flags.string({description: "Memo to include in the transaction", default: "", required: false}),
   }
@@ -23,7 +24,7 @@ export default class Initialize extends Base {
     const client = await SigningCosmWasmClient
       .connectWithSigner(this.chainConfig!.rpcEndpoint, wallet, {"gasPrice": this.gasPrice});
     const initMsg = {
-      owner: signerAddress,
+      owner: flags.owner || signerAddress, // Use provided owner or signer address if not specified
     };
     this.log("Initializing vesting rewards orchestrator with: ", initMsg);
     const instantiateResult = await client.instantiate(signerAddress, args.codeId, initMsg, flags.label, 'auto', {
