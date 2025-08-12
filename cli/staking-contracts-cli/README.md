@@ -20,7 +20,7 @@ $ npm install -g staking-contracts-cli
 $ symphony-staking-cli COMMAND
 running command...
 $ symphony-staking-cli (--version)
-staking-contracts-cli/0.0.0 darwin-arm64 node-v18.18.2
+staking-contracts-cli/0.0.0 darwin-arm64 node-v22.11.0
 $ symphony-staking-cli --help [COMMAND]
 USAGE
   $ symphony-staking-cli COMMAND
@@ -648,14 +648,15 @@ Initialize vesting contract for rewards distribution
 
 ```
 USAGE
-  $ symphony-staking-cli vesting init CODEID --label <value> [--memo <value>]
+  $ symphony-staking-cli vesting init CODEID --label <value> [-o <value>] [--memo <value>]
 
 ARGUMENTS
   CODEID  Code ID of the contract
 
 FLAGS
-  --label=<value>  (required) Label for the contract
-  --memo=<value>   Memo to include in the transaction
+  -o, --owner=<value>  Owner address of the contract
+      --label=<value>  (required) Label for the contract
+      --memo=<value>   Memo to include in the transaction
 
 DESCRIPTION
   Initialize vesting contract for rewards distribution
